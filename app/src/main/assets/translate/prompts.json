@@ -1,0 +1,83 @@
+{
+  "version": 1,
+  "system": "You translate short text messages. Reply with only the translated message, written in the requested language. Keep names, numbers, codes, dates, URLs, currency amounts and the general punctuation as they are. Do not add explanations, labels or commentary.",
+  "sampling": {
+    "temperature": 0.1,
+    "retryTemperature": 0.4,
+    "maxNewTokens": 200
+  },
+  "examples": [
+    {
+      "from": "hi",
+      "to": "en",
+      "input": "कल दोपहर को खाने पर आना",
+      "output": "Come to lunch tomorrow noon"
+    },
+    {
+      "from": "en",
+      "to": "hi",
+      "input": "Are you coming to lunch tomorrow?",
+      "output": "कल दोपहर को खाने पर आओगे?"
+    },
+    {
+      "from": "es",
+      "to": "en",
+      "input": "Te llamo más tarde, ¿vale?",
+      "output": "I'll call you later, okay?"
+    },
+    {
+      "from": "en",
+      "to": "es",
+      "input": "See you at six.",
+      "output": "Hasta las seis."
+    },
+    {
+      "from": "ar",
+      "to": "en",
+      "input": "أنا في الطريق",
+      "output": "I am on my way"
+    },
+    {
+      "from": "en",
+      "to": "ar",
+      "input": "I'll be there in ten minutes.",
+      "output": "سأكون هناك خلال عشر دقائق"
+    },
+    {
+      "from": "zh",
+      "to": "en",
+      "input": "我明天有空",
+      "output": "I am free tomorrow"
+    },
+    {
+      "from": "en",
+      "to": "zh",
+      "input": "Let's meet at the station.",
+      "output": "我们在车站见。"
+    },
+    {
+      "from": "ja",
+      "to": "en",
+      "input": "明日は会えませんか",
+      "output": "Can we meet tomorrow?"
+    },
+    {
+      "from": "fr",
+      "to": "en",
+      "input": "Je t'appelle plus tard, d'accord ?",
+      "output": "I'll call you later, okay?"
+    },
+    {
+      "from": "de",
+      "to": "en",
+      "input": "Ich schicke dir morgen eine Nachricht.",
+      "output": "I'll send you a message tomorrow."
+    },
+    {
+      "from": "en",
+      "to": "pt",
+      "input": "Talk to you tomorrow.",
+      "output": "Falo com você amanhã."
+    }
+  ]
+}

@@ -1,0 +1,216 @@
+{
+ "minShortenable": 55,
+ "drafts": [
+  {
+   "set": "tuning",
+   "draft": "hey can u send me the adress for sunday bbq. bringing salad n drinks",
+   "facts": [
+    "sunday",
+    "bbq",
+    "salad",
+    "drinks"
+   ],
+   "must": [
+    "\\bme\\b"
+   ],
+   "mustNot": [
+    "send you"
+   ]
+  },
+  {
+   "set": "tuning",
+   "draft": "I need the report today. Why is it late?",
+   "facts": [
+    "report",
+    "today"
+   ],
+   "must": [
+    "\\bI (need|require)|need(ed)? the report|\\bwe need"
+   ],
+   "mustNot": []
+  },
+  {
+   "set": "tuning",
+   "draft": "Running 15 mins late sorry, traffic is bad",
+   "facts": [
+    "15"
+   ],
+   "must": [
+    "\\b(I|I'm|I am|running|sorry)\\b"
+   ],
+   "mustNot": [
+    "\\byou('re| are)\\b.{0,15}late"
+   ]
+  },
+  {
+   "set": "tuning",
+   "draft": "Your payment of $142.30 is overdue. Please pay now.",
+   "facts": [
+    "142\\.30"
+   ],
+   "must": [
+    "\\byour\\b|\\byou\\b"
+   ],
+   "mustNot": []
+  },
+  {
+   "set": "tuning",
+   "draft": "cant make it tmrw, got a dentist apt at 2:30 will call u after",
+   "facts": [
+    "2:30",
+    "dentist"
+   ],
+   "must": [
+    "\\bcall (you|u)\\b"
+   ],
+   "mustNot": [
+    "\\bcall me\\b"
+   ]
+  },
+  {
+   "set": "tuning",
+   "draft": "Thanks for the invite but I wont be able to come.",
+   "facts": [
+    "thank|invit"
+   ],
+   "must": [
+    "n't|\\bnot\\b|unable|cannot|\\bwont\\b|\\bwon't\\b"
+   ],
+   "mustNot": [
+    "I('ll| will) (be there|come)"
+   ]
+  },
+  {
+   "set": "tuning",
+   "draft": "Please confirm if you can attend the meeting on Thursday 21 Nov at 3pm in room B12.",
+   "facts": [
+    "thursday",
+    "21",
+    "3\\s?pm",
+    "b12"
+   ],
+   "must": [
+    "confirm|let me know|rsvp|inform"
+   ],
+   "mustNot": []
+  },
+  {
+   "set": "tuning",
+   "draft": "u still owe me $50 from last week",
+   "facts": [
+    "50"
+   ],
+   "must": [
+    "\\byou\\b.*\\bowe\\b|\\bowe\\b.{0,12}\\bme\\b"
+   ],
+   "mustNot": [
+    "\\bI (still )?owe you"
+   ]
+  },
+  {
+   "set": "heldout",
+   "draft": "hi its sam from the gym, ur membership expires on 3 dec, call us on 02 9555 1234",
+   "facts": [
+    "sam",
+    "3 dec|dec 3|december 3",
+    "02 ?9555 ?1234"
+   ],
+   "must": [
+    "\\b(your|you)\\b"
+   ],
+   "mustNot": []
+  },
+  {
+   "set": "heldout",
+   "draft": "cant pick u up at 6 anymore, can u get a taxi? ill pay",
+   "facts": [
+    "\\b6\\b"
+   ],
+   "must": [
+    "\\b(I'll|I will|I'd|I)\\b.*\\bpay\\b|\\bpay\\b"
+   ],
+   "mustNot": [
+    "you('ll| will) pay"
+   ]
+  },
+  {
+   "set": "heldout",
+   "draft": "the delivery was meant to be here yesterday. where is my order #48213",
+   "facts": [
+    "48213"
+   ],
+   "must": [
+    "\\bmy order\\b|\\border\\b"
+   ],
+   "mustNot": []
+  },
+  {
+   "set": "heldout",
+   "draft": "sorry i missed ur call, driving. ill ring back at 4:15",
+   "facts": [
+    "4:15",
+    "sorry"
+   ],
+   "must": [
+    "\\b(I'll|I will|I)\\b.*\\b(call|ring)"
+   ],
+   "mustNot": [
+    "you('ll| will) (call|ring)"
+   ]
+  },
+  {
+   "set": "heldout",
+   "draft": "Happy birthday Mia!! hope ur day is great, dinner is at 7 at Luigi's",
+   "facts": [
+    "mia",
+    "\\b7\\b",
+    "luigi"
+   ],
+   "must": [
+    "birthday"
+   ],
+   "mustNot": []
+  },
+  {
+   "set": "heldout",
+   "draft": "pls dont forget the keys, the plumber comes at 9am tomorrow",
+   "facts": [
+    "keys",
+    "9\\s?am",
+    "plumber"
+   ],
+   "must": [
+    "\\b(please|don't forget|do not forget|remember)\\b"
+   ],
+   "mustNot": []
+  },
+  {
+   "set": "heldout",
+   "draft": "can u pay me back the $85 for the tickets, thx",
+   "facts": [
+    "85",
+    "ticket"
+   ],
+   "must": [
+    "\\b(you|u)\\b.*\\b(pay|repay|send|transfer|return)|\\b(pay|repay)\\b.{0,12}\\bme\\b|me back"
+   ],
+   "mustNot": [
+    "\\bI('ll| will)? (pay|owe) you"
+   ]
+  },
+  {
+   "set": "heldout",
+   "draft": "Your appointment with Dr Lee is confirmed for 14 Jan at 10:30. Reply STOP to cancel.",
+   "facts": [
+    "lee",
+    "14",
+    "10:30",
+    "stop"
+   ],
+   "must": [
+    "\\b(your|you)\\b"
+   ],
+   "mustNot": []
+  }
+ ]
+}

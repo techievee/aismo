@@ -1,0 +1,96 @@
+{
+  "version": 2,
+  "system": "You rewrite short text messages. Reply with only the rewritten message and nothing else. Keep every name, number, date, time, amount and link exactly as written. Keep who does what: 'I' and 'me' stay the writer, 'you' stays the reader. Do not add facts, emoji or greetings that were not there.",
+  "sampling": {
+    "temperature": 0.2,
+    "retryTemperature": 0.5,
+    "maxNewTokens": 120
+  },
+  "modes": {
+    "polish": {
+      "instruction": "Rewrite this message with correct spelling, grammar, punctuation and capital letters. Write out text-speak in full. Keep the meaning and the tone.",
+      "examples": [
+        {
+          "input": "hey cn u pls snd me the report by 5pm im waiting",
+          "output": "Hey, can you please send me the report by 5pm? I'm waiting."
+        },
+        {
+          "input": "thx for ur help yesturday it ment alot. ill pay u the 40 bucks on fri",
+          "output": "Thanks for your help yesterday, it meant a lot. I'll pay you the 40 bucks on Friday."
+        },
+        {
+          "input": "i dont no if ill mak it tonite, traffics realy bad. will let u no",
+          "output": "I don't know if I'll make it tonight, traffic's really bad. I'll let you know."
+        }
+      ]
+    },
+    "fix": {
+      "instruction": "Fix the spelling and grammar. Keep the wording otherwise.",
+      "examples": [
+        {
+          "input": "i dont no wen the meating starts",
+          "output": "I don't know when the meeting starts."
+        },
+        {
+          "input": "cn u call me tomoro",
+          "output": "Can you call me tomorrow?"
+        },
+        {
+          "input": "thanks for ur help yesturday",
+          "output": "Thanks for your help yesterday."
+        }
+      ]
+    },
+    "polite": {
+      "instruction": "Rewrite this message so it sounds polite and professional.",
+      "examples": [
+        {
+          "input": "cant do thurs, got a thing",
+          "output": "I'm unable to attend on Thursday as I have a prior commitment."
+        },
+        {
+          "input": "pls send the invoice, need it by 5",
+          "output": "Please send the invoice. I need it by 5 pm."
+        },
+        {
+          "input": "thx, will call u later",
+          "output": "Thank you. I will call you later."
+        }
+      ]
+    },
+    "friendly": {
+      "instruction": "Rewrite this message so it sounds warmer and friendlier.",
+      "examples": [
+        {
+          "input": "where r u. we're waiting",
+          "output": "Hi! Where are you? We're waiting for you."
+        },
+        {
+          "input": "send me the file asap",
+          "output": "Could you please send me the file when you get a chance? Thanks!"
+        },
+        {
+          "input": "i paid u $20 on monday",
+          "output": "Hi, just a note that I paid you $20 on Monday."
+        }
+      ]
+    },
+    "shorter": {
+      "instruction": "Rewrite this as a much shorter text message using as few words as possible. Keep every number, amount, date, time and name.",
+      "examples": [
+        {
+          "input": "Hi Sarah, just letting you know that I'm running about 15 minutes late because the traffic is really bad today.",
+          "output": "Hi Sarah, running 15 min late, bad traffic."
+        },
+        {
+          "input": "Hey, I was wondering if you could possibly let me know whether you're free for lunch on Friday at 12:30?",
+          "output": "Free for lunch Friday 12:30?"
+        },
+        {
+          "input": "Thanks so much for sending that over, I really appreciate it and I'll have a look at it tonight.",
+          "output": "Thanks, I'll look at it tonight."
+        }
+      ]
+    }
+  }
+}

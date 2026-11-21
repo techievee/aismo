@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy policy — aismo (AI SMS Manager)</title>
+<style>
+  :root { color-scheme: light dark; }
+  body { font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; line-height: 1.6; max-width: 46rem; margin: 2rem auto; padding: 0 1.25rem; }
+  h1, h2 { line-height: 1.25; }
+  code { font-family: ui-monospace, monospace; font-size: 0.9em; }
+  .date { color: #777; }
+  footer { margin-top: 2.5rem; font-size: 0.9em; color: #777; }
+</style>
+</head>
+<body>
+<h1>Privacy policy — aismo (AI SMS Manager)</h1>
+<p class="date">Last updated 21 November 2026 · aismo for Android, package <code>aismo.sms</code></p>
+
+<p><strong>The short version: everything stays on your phone.</strong> aismo does not hold Android's
+internet permission, so it cannot send your messages, contacts or anything else to any server. It has no
+account, no ads and no usage statistics, and it sends nothing anywhere, ever.</p>
+
+<h2>What the app does</h2>
+<p>aismo shows your text and picture messages, files them into categories (one-time codes, bank alerts,
+bills, orders, travel, promotions and your own categories), totals your spending, searches your messages
+by words or by meaning, and can rewrite your drafts. All of this — including the AI — runs on the phone.
+Nothing is processed in the cloud.</p>
+
+<h2>What aismo reads, and why</h2>
+<ul>
+  <li><strong>Your messages (SMS and MMS).</strong> With your permission, aismo reads your conversations so it can show, sort, search, total and back them up. They are stored in a private database on your phone and never leave it.</li>
+  <li><strong>Your contacts.</strong> So it can show names instead of numbers and suggest contacts as you type. Contacts are never copied anywhere; aismo keeps no copy of them.</li>
+  <li><strong>Which SIM your phone has.</strong> So you can choose which SIM a message goes out on. The number itself is only shown to you, in the SIM picker.</li>
+</ul>
+
+<h2>What aismo never does</h2>
+<ul>
+  <li>It has <strong>no internet permission</strong>, so it cannot contact any server, show ads, or report anything. One library it uses (ONNX Runtime) requests internet access and includes a client that reports usage; both were removed from the app, and a test checks the installed app on every run.</li>
+  <li>It keeps <strong>no account and collects no usage statistics</strong>.</li>
+  <li>It <strong>does not share your data</strong> with anyone, including the developer. The only exception by nature of the platform: picture messages travel through your carrier's standard MMS service, exactly as in any messaging app, and messages sent and received use your carrier's normal SMS service.</li>
+</ul>
+
+<h2>Backups</h2>
+<p>Backups are something you start, not something that happens. When you create one, it is encrypted with
+a passphrase you choose and saved to a location you choose; aismo cannot read it without that passphrase,
+and the backup only goes where you put it.</p>
+
+<h2>Permissions</h2>
+<p>aismo asks only for what it needs to do its job: read, send and store your messages (Android allows this
+only to the default SMS app), show notifications, read your contacts, know your SIMs, vibrate, restart its
+background jobs after a phone restart, and ask for your fingerprint or the app's PIN when you have locked a
+category. The app's in-app help screen lists every permission it holds, and why.</p>
+
+<h2>Changes and questions</h2>
+<p>Changes to this policy are published with the app's source code. Questions about this policy can be sent
+to the developer through the contact details listed with the app on Google Play.</p>
+
+<footer>
+  aismo is available at <a href="https://github.com/techievee/aismo">github.com/techievee/aismo</a> and on
+  Google Play.
+</footer>
+</body>
+</html>

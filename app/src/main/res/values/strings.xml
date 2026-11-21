@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">aismo: AI SMS Manager</string>
+    <!-- The name under the icon on the home screen, short enough not to be cut off. -->
+    <string name="launcher_name">aismo</string>
+
+    <string name="channel_messages">Messages</string>
+    <string name="channel_otp">One-time codes</string>
+    <string name="channel_finance">Spending and budgets</string>
+    <string name="channel_reminders">Reminders</string>
+    <string name="channel_protection">Spam and scam alerts</string>
+    <string name="channel_backup">Backup</string>
+    <string name="channel_spam_review">Weekly spam review</string>
+
+    <string name="you">You</string>
+    <string name="mark_read">Mark read</string>
+    <string name="reply">Reply</string>
+    <string name="delete">Delete</string>
+    <string name="copy_code">Copy code</string>
+    <string name="code_copied">Code copied</string>
+    <string name="code_title">Code %1$s</string>
+    <string name="valid_minutes">valid %1$d min</string>
+    <string name="delivered">Message delivered</string>
+    <string name="suspicious_title">Suspicious message</string>
+    <string name="suspicious_text">From %1$s. Do not tap links or share codes.</string>
+    <string name="tap_to_view">Tap to view</string>
+    <string name="spam_review_title">Time to review your spam</string>
+    <string name="spam_review_text">%1$s in %2$s. Open Spam to look through them and delete what you do not need.</string>
+    <plurals name="spam_messages">
+        <item quantity="one">%d spam message</item>
+        <item quantity="other">%d spam messages</item>
+    </plurals>
+    <plurals name="spam_conversations">
+        <item quantity="one">%d conversation</item>
+        <item quantity="other">%d conversations</item>
+    </plurals>
+    <string name="budget_title">Budget alert: %1$s</string>
+    <string name="budget_text">Spent %1$s of %2$s this month</string>
+    <string name="overall">Overall</string>
+    <string name="debited">Debited</string>
+    <string name="credited">Credited</string>
+    <string name="balance_short">Bal %1$s</string>
+
+    <string name="send_failed_title">Couldn\'t send your message to %1$s</string>
+    <string name="mms_tap_to_download">Multimedia message · tap to download</string>
+    <string name="mms_photo">Photo</string>
+    <string name="mms_video">Video</string>
+    <string name="mms_audio">Audio</string>
+    <string name="mms_contact">Contact card</string>
+    <string name="mms_attachment">Attachment</string>
+</resources>

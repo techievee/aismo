@@ -1,0 +1,19 @@
+build/
+.gradle/
+.idea/
+*.iml
+local.properties
+*.apk
+!release/*.apk
+*.aab
+*.keystore
+*.jks
+.kotlin/
+captures/
+.DS_Store
+.cxx/
+
+# local development artifacts, never part of the repo
+granite-350m*
+graphify-out/
+app-release-*.apk*

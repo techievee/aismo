@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<paths>
+    <!-- PDU files handed to the system MMS service, and attachments shared with other apps. -->
+    <cache-path name="mms" path="mms/" />
+    <cache-path name="shared" path="shared/" />
+</paths>

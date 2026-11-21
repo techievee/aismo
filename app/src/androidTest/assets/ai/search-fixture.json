@@ -1,0 +1,270 @@
+{
+ "messages": [
+  {
+   "id": 1,
+   "text": "Your AGL electricity bill of $142.30 is due on 5 Dec. Pay in the app or at agl.com.au"
+  },
+  {
+   "id": 2,
+   "text": "Origin Energy: your gas account is overdue by $88.10. Please pay by Friday to avoid disconnection."
+  },
+  {
+   "id": 3,
+   "text": "Telstra: your internet plan renews on 14 Dec for $89. No action needed."
+  },
+  {
+   "id": 4,
+   "text": "CommBank: $54.20 spent at WOOLWORTHS BONDI on card ending 4421. Avail bal $1,203.55"
+  },
+  {
+   "id": 5,
+   "text": "NAB: a payment of $2,400.00 to LANDLORD PTY LTD was made from your account on 1 Nov."
+  },
+  {
+   "id": 6,
+   "text": "Salary credited: $3,850.00 from BETMAKERS PTY LTD to a/c XX9021. Balance $4,102.10"
+  },
+  {
+   "id": 7,
+   "text": "123456 is your Uber verification code. Do not share it with anyone."
+  },
+  {
+   "id": 8,
+   "text": "Your PayPal security code is 884112. It expires in 10 minutes."
+  },
+  {
+   "id": 9,
+   "text": "Qantas: your flight QF410 SYD to MEL departs 7:45am Tuesday. Check in opens 24h before."
+  },
+  {
+   "id": 10,
+   "text": "Virgin Australia: boarding for VA823 to Brisbane starts 6:10pm at gate 22."
+  },
+  {
+   "id": 11,
+   "text": "Your Uber Eats order from Dumpling House is on its way. Arriving in 12 minutes."
+  },
+  {
+   "id": 12,
+   "text": "Australia Post: your parcel AP772193 has been delivered and left at the front door."
+  },
+  {
+   "id": 13,
+   "text": "StarTrack: we missed you. Your parcel will be redelivered tomorrow between 9am and 5pm."
+  },
+  {
+   "id": 14,
+   "text": "Reminder: dentist appointment with Dr Chen on Thursday 21 Nov at 2:30pm. Reply C to confirm."
+  },
+  {
+   "id": 15,
+   "text": "Your prescription is ready for collection at Chemist Warehouse Bondi Junction."
+  },
+  {
+   "id": 16,
+   "text": "Hi Mum, running late. Can you pick up the kids at 3:30? xx"
+  },
+  {
+   "id": 17,
+   "text": "Dinner at 7? Table is booked at the Italian place on Oxford St."
+  },
+  {
+   "id": 18,
+   "text": "Happy birthday mate! Hope you have an awesome day, drinks on Saturday?"
+  },
+  {
+   "id": 19,
+   "text": "Can you send me the address for Sunday's barbecue? Bringing salad and drinks."
+  },
+  {
+   "id": 20,
+   "text": "Congratulations! You've won a $1000 gift card. Click http://bit.ly/claim-now to claim your prize."
+  },
+  {
+   "id": 21,
+   "text": "URGENT: your Medicare account has been suspended. Verify your details at medicare-secure.top"
+  },
+  {
+   "id": 22,
+   "text": "ATO: you have a tax refund of $1,240 pending. Confirm your bank details at ato-refund.win"
+  },
+  {
+   "id": 23,
+   "text": "50% OFF everything this weekend only at Rebel Sport. Shop now, ends Sunday."
+  },
+  {
+   "id": 24,
+   "text": "Dan Murphy's: free delivery on orders over $100 this week. Stock up for summer."
+  },
+  {
+   "id": 25,
+   "text": "Service NSW: your driver licence renewal is due in 30 days. Renew online to avoid a late fee."
+  },
+  {
+   "id": 26,
+   "text": "Your Opal card balance is low ($4.20). Top up to keep travelling."
+  },
+  {
+   "id": 27,
+   "text": "Hi, this is Sarah from Ray White. Are you free for an inspection of the unit at 11am Saturday?"
+  },
+  {
+   "id": 28,
+   "text": "Your rent of $620 is due tomorrow. Please transfer to the usual account."
+  },
+  {
+   "id": 29,
+   "text": "Bupa: your claim for physio of $65.00 has been processed. $48.00 will be paid to your account."
+  },
+  {
+   "id": 30,
+   "text": "University of Sydney: your enrolment for semester 1 opens on 20 January. Log in to choose units."
+  },
+  {
+   "id": 31,
+   "text": "Netflix: your payment of $22.99 was successful. Thanks for being a member."
+  },
+  {
+   "id": 32,
+   "text": "Spotify: your Premium plan will renew on 3 Dec at $13.99."
+  },
+  {
+   "id": 33,
+   "text": "Your car service is booked for Monday 9am at Kia Alexandria. Call us to reschedule."
+  },
+  {
+   "id": 34,
+   "text": "Hey, the footy is on tonight at the pub, you in?"
+  },
+  {
+   "id": 35,
+   "text": "Coles: your online order for Wednesday 4pm has been confirmed. 24 items."
+  },
+  {
+   "id": 36,
+   "text": "Interest of $3.12 was credited to your savings account this month."
+  },
+  {
+   "id": 37,
+   "text": "Heavy rain warning for Sydney tonight. Avoid unnecessary travel. SES emergency: 132 500."
+  },
+  {
+   "id": 38,
+   "text": "Your Optus mobile data is 90% used. Add a data pack to stay connected."
+  },
+  {
+   "id": 39,
+   "text": "Thanks for your payment of $142.30. Your AGL account is now up to date."
+  },
+  {
+   "id": 40,
+   "text": "Job alert: Senior Android Developer at Canva, Sydney. 5 new matches for you."
+  }
+ ],
+ "queries": [
+  {
+   "query": "power bill",
+   "relevant": [
+    1,
+    39
+   ]
+  },
+  {
+   "query": "electricity",
+   "relevant": [
+    1,
+    39
+   ]
+  },
+  {
+   "query": "flight",
+   "relevant": [
+    9,
+    10
+   ]
+  },
+  {
+   "query": "verification code",
+   "relevant": [
+    7,
+    8
+   ]
+  },
+  {
+   "query": "parcel delivery",
+   "relevant": [
+    12,
+    13
+   ]
+  },
+  {
+   "query": "doctor appointment",
+   "relevant": [
+    14,
+    15,
+    29
+   ]
+  },
+  {
+   "query": "scam",
+   "relevant": [
+    20,
+    21,
+    22
+   ]
+  },
+  {
+   "query": "rent",
+   "relevant": [
+    5,
+    28
+   ]
+  },
+  {
+   "query": "subscription renewal",
+   "relevant": [
+    3,
+    31,
+    32
+   ]
+  },
+  {
+   "query": "birthday",
+   "relevant": [
+    18
+   ]
+  },
+  {
+   "query": "groceries",
+   "relevant": [
+    4,
+    35
+   ]
+  },
+  {
+   "query": "sale discount",
+   "relevant": [
+    23,
+    24
+   ]
+  },
+  {
+   "query": "tax refund",
+   "relevant": [
+    22
+   ]
+  },
+  {
+   "query": "job opportunity",
+   "relevant": [
+    40
+   ]
+  }
+ ],
+ "noMatch": [
+  "quantum physics lecture",
+  "dinosaur fossil museum",
+  "knitting patterns for beginners",
+  "volcano eruption in Iceland"
+ ]
+}
