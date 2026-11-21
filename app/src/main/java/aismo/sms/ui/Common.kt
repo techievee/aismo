@@ -4,7 +4,9 @@ import android.Manifest
 import android.app.Activity
 import android.app.role.RoleManager
 import android.content.Context
+import android.content.Intent
 import android.content.pm.PackageManager
+import android.net.Uri
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,6 +61,23 @@ fun Context.hasPermission(permission: String) =
     ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
 
 fun Context.canReadSms() = hasPermission(Manifest.permission.READ_SMS)
+
+/** The green WhatsApp is known from, for the "open in WhatsApp" buttons. */
+val WhatsAppGreen = Color(0xFF25D366)
+
+/**
+ * Opens a WhatsApp chat with [address] ([text] prefilled when given), via its `wa.me` link: the WhatsApp app
+ * when it is installed, the browser (and from there WhatsApp) when it is not. Returns false when the number
+ * has no digits or nothing can be opened, so the caller can say so.
+ */
+fun Context.openWhatsApp(address: String, text: String? = null): Boolean {
+    val digits = address.filter { it.isDigit() }
+    if (digits.isEmpty()) return false
+    val uri = Uri.parse("https://wa.me/$digits" + (if (text.isNullOrBlank()) "" else "?text=" + Uri.encode(text)))
+    return runCatching {
+        startActivity(Intent(Intent.ACTION_VIEW, uri).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+    }.isSuccess
+}
 
 val RuntimePermissions: Array<String> = arrayOf(
     Manifest.permission.READ_SMS, Manifest.permission.SEND_SMS, Manifest.permission.RECEIVE_SMS,

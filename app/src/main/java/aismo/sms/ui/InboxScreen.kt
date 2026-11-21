@@ -1,6 +1,8 @@
 package aismo.sms.ui
 
 import android.app.role.RoleManager
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.ExperimentalFoundationApi
@@ -36,6 +38,7 @@ import androidx.compose.material.icons.automirrored.filled.HelpOutline
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.GppMaybe
+import androidx.compose.material.icons.filled.LocalCafe
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Settings
@@ -49,6 +52,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.ListItem
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SwipeToDismissBox
@@ -170,6 +174,14 @@ fun InboxScreen(actions: InboxActions) {
                                 HorizontalDivider()
                                 MenuEntry(Icons.Filled.Settings, "Settings") { menuOpen = false; actions.settings() }
                                 MenuEntry(Icons.AutoMirrored.Filled.HelpOutline, "Help and about") { menuOpen = false; actions.about() }
+                                HorizontalDivider()
+                                // Opens in the browser; like everything else in this menu, it only happens when tapped.
+                                MenuEntry(Icons.Filled.LocalCafe, "Buy me a coffee") {
+                                    menuOpen = false
+                                    runCatching {
+                                        context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://buymeacoffee.com/aismo")).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                                    }
+                                }
                             }
                         }
                     },
@@ -392,10 +404,11 @@ private fun ConversationRow(
     val title by rememberConversationTitle(c.address, c.title)
     val unread = c.unreadCount > 0
     val color = categoryColor(c.category)
+    // The highlight goes on the ListItem's own background: a .background modifier on it would be painted
+    // underneath and the selection would not be visible.
     ListItem(
-        modifier = Modifier
-            .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface)
-            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+        colors = ListItemDefaults.colors(containerColor = if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surface),
+        modifier = Modifier.combinedClickable(onClick = onClick, onLongClick = onLongClick),
         leadingContent = { CategoryBadge(c.category, size = 44.dp) },
         headlineContent = {
             Text(title, maxLines = 1, overflow = TextOverflow.Ellipsis, fontWeight = if (unread) FontWeight.Bold else FontWeight.Normal)

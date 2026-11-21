@@ -65,4 +65,13 @@ class ConversationKeysTest {
         assertTrue(ConversationKeys.canReply("+61412345678, 0400111222"))
         assertEquals("HDFCBK", ConversationKeys.senderToken("VM-HDFCBK"))
     }
+
+    @Test fun theSiblingFormsAreTheOtherSideOfTheSameConversation() {
+        assertEquals(listOf("m:412345678"), ConversationKeys.siblingForms("p:412345678"))
+        assertEquals(listOf("m:HDFCBK"), ConversationKeys.siblingForms("s:HDFCBK"))
+        assertEquals("an m: key may be a phone or a business sender", listOf("p:412345678", "s:412345678"), ConversationKeys.siblingForms("m:412345678"))
+        assertEquals(listOf("gm:p:400111222|p:412345678"), ConversationKeys.siblingForms("g:p:400111222|p:412345678"))
+        assertEquals(listOf("g:p:400111222|p:412345678"), ConversationKeys.siblingForms("gm:p:400111222|p:412345678"))
+        assertEquals(emptyList<String>(), ConversationKeys.siblingForms("unknown"))
+    }
 }

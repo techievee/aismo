@@ -71,7 +71,7 @@ class LongTextConversionTest {
         assertEquals("no SMS segments were written", 0, smsRows().size)
         val row = mmsRows().single()
         assertEquals(listOf(to), row.to)
-        assertTrue("marked as a converted long text", row.transactionId!!.startsWith("tsol"))
+        assertTrue("marked as a converted long text", row.transactionId!!.startsWith(aismo.sms.data.mms.MmsEngine.TID_LONG_TEXT))
         val parts = c.mmsProvider.parts(row.rawId)
         assertEquals(listOf("application/smil", "text/plain"), parts.map { it.mime })
         assertEquals("the text is delivered whole, not truncated", longText.trim(), parts[1].text)
@@ -128,7 +128,7 @@ class LongTextConversionTest {
     @Test fun aFailedConvertedTextCanBeResentAsAnOrdinarySms() = runBlocking {
         // a converted long text that the network refused
         val textPart = MmsPart("text/plain", "text_0.txt", "text_0", MmsCharset.UTF_8, longText.trim().toByteArray())
-        val raw = c.mmsProvider.insertOutgoing(listOf(to), null, listOf(textPart), -1, "tsolXYZ")
+        val raw = c.mmsProvider.insertOutgoing(listOf(to), null, listOf(textPart), -1, "${aismo.sms.data.mms.MmsEngine.TID_LONG_TEXT}XYZ")
         c.mmsProvider.updateBox(raw, Telephony.Mms.MESSAGE_BOX_FAILED)
         val id = MessageIds.mms(raw); c.repository.refresh(listOf(id))
 
@@ -164,7 +164,7 @@ class LongTextConversionTest {
         val r = outgoing.send(listOf(to), longText, listOf(OutgoingAttachment(f, "application/octet-stream", "n.bin")), -1) as SendOutcome.Sent
         assertEquals(SendRoute.MMS, r.route)
         val row = mmsRows().single()
-        assertFalse("not marked as a converted long text: it has an attachment", row.transactionId!!.startsWith("tsol"))
+        assertFalse("not marked as a converted long text: it has an attachment", row.transactionId!!.startsWith(aismo.sms.data.mms.MmsEngine.TID_LONG_TEXT))
         assertEquals(3, c.mmsProvider.parts(row.rawId).size)
     }
 }

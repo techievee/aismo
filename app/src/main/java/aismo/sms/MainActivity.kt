@@ -274,6 +274,7 @@ private fun AppNav(pending: MutableState<Intent?>) {
                 onAppearance = { nav.navigate(Routes.APPEARANCE) },
                 onHelp = { nav.navigate(Routes.HELP) },
                 onAbout = { nav.navigate(Routes.ABOUT) },
+                onPrivacy = { nav.navigate(Routes.PRIVACY) },
             )
         }
         composable(Routes.CATEGORIES) { CategoriesScreen(onBack = { nav.popBackStack() }) }

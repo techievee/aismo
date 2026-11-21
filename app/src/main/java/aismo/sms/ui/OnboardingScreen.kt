@@ -63,8 +63,8 @@ fun OnboardingScreen(onContinue: () -> Unit) {
             }
         }
         Text(
-            "Your messages, sorted automatically. Codes, bank alerts, bills, orders and travel are grouped for you, " +
-                "and everything stays on this phone.",
+            "Your messages, sorted automatically. Codes, bank alerts, bills, orders and travel are grouped for you. " +
+                "Everything stays on this phone: all sorting, search and AI run here, and nothing is ever sent to the internet.",
             style = MaterialTheme.typography.bodyLarge,
         )
         Spacer(Modifier.height(8.dp))

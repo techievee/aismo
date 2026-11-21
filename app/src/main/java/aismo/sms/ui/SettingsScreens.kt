@@ -18,6 +18,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Alarm
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoDelete
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Category
@@ -33,9 +34,12 @@ import androidx.compose.material.icons.filled.Key
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.NotificationsActive
+import androidx.compose.material.icons.filled.Merge
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Password
 import androidx.compose.material.icons.filled.PermMedia
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.PrivacyTip
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.Public
 import androidx.compose.material.icons.filled.Receipt
@@ -121,7 +125,7 @@ import aismo.sms.work.Workers
 @Composable
 fun SettingsScreen(
     onBack: () -> Unit, onCategories: () -> Unit, onCategoryOrder: () -> Unit, onRules: () -> Unit, onBackup: () -> Unit, onAppearance: () -> Unit,
-    onHelp: () -> Unit, onAbout: () -> Unit,
+    onHelp: () -> Unit, onAbout: () -> Unit, onPrivacy: () -> Unit,
 ) {
     val context = LocalContext.current
     val c = context.container
@@ -165,10 +169,17 @@ fun SettingsScreen(
                 SwitchRow(Icons.Filled.DoneAll, alerts, "Delivery confirmations", "Tell me when a message is delivered", s.deliveryNotifications) { v -> update { it.copy(deliveryNotifications = v) } }
                 SwitchRow(Icons.Filled.VolumeUp, alerts, "Send sound", "Play a short tone after sending", s.sendSound) { v -> update { it.copy(sendSound = v) } }
                 SwitchRow(Icons.Filled.CleaningServices, alerts, "Weekly spam review", "A reminder every Sunday morning to look through spam and delete it", s.spamReviewReminder) { v -> update { it.copy(spamReviewReminder = v) } }
+                SwitchRow(Icons.Filled.Person, alerts, "Alert only for contacts", "No notifications from senders that are not in your contacts. Their messages still arrive and are sorted.", s.notifyContactsOnly) { v -> update { it.copy(notifyContactsOnly = v) } }
             }
 
             val media = SettingsAccent.Media
             SettingsGroup("Multimedia messages (MMS)", Icons.Filled.PermMedia, media) {
+                SwitchRow(Icons.Filled.Merge, media, "Keep texts and pictures together", "On, SMS and MMS from the same sender share one thread; off, they stay in separate threads. Inbox categories follow the choice.", s.groupSmsAndMms) { v ->
+                    scope.launch {
+                        c.settings.update { it.copy(groupSmsAndMms = v) }
+                        launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { c.repository.maintainGrouping() } }
+                    }
+                }
                 SwitchRow(Icons.Filled.CloudDownload, media, "Download automatically", "Fetch pictures and videos as soon as they arrive", s.autoDownloadMms) { v -> update { it.copy(autoDownloadMms = v) } }
                 SwitchRow(Icons.Filled.Public, media, "Download while roaming", "May cost extra when you are away from your network", s.downloadMmsWhileRoaming, enabled = s.autoDownloadMms) { v -> update { it.copy(downloadMmsWhileRoaming = v) } }
                 SwitchRow(Icons.Filled.Description, media, "Send long texts as MMS", "One multimedia message instead of a chain of text parts", s.longTextToMms) { v -> update { it.copy(longTextToMms = v) } }
@@ -222,6 +233,7 @@ fun SettingsScreen(
 
             val data = SettingsAccent.Data
             SettingsGroup("Data", Icons.Filled.Storage, data) {
+                NavRow(Icons.Filled.PrivacyTip, data, "Private by design", "Everything is processed on this phone. aismo has no internet permission, so nothing is ever sent anywhere.", chevron = true, onClick = onPrivacy)
                 NavRow(Icons.Filled.Backup, data, "Backup and restore", "Encrypted copy of your messages and settings", chevron = true, onClick = onBackup)
             }
 
@@ -290,16 +302,32 @@ private fun smartSearchSummary(s: SmartSearchStatus): String = when {
 }
 
 @Composable
-internal fun ChoiceDialog(title: String, options: List<String>, selected: Int, onPick: (Int) -> Unit, onDismiss: () -> Unit) {
+internal fun ChoiceDialog(
+    title: String,
+    options: List<String>,
+    selected: Int,
+    onPick: (Int) -> Unit,
+    /** The one entry that fits this phone best: a sparkles mark and the accent colour, so it is picked out at a glance. */
+    recommended: Int? = null,
+    onDismiss: () -> Unit,
+) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text(title) },
         text = {
             Column {
                 options.forEachIndexed { i, label ->
-                    Row(Modifier.fillMaxWidth().clickable { onPick(i); onDismiss() }, verticalAlignment = Alignment.CenterVertically) {
+                    val isRecommended = i == recommended
+                    Row(
+                        Modifier.fillMaxWidth().clickable { onPick(i); onDismiss() },
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
                         RadioButton(selected = i == selected, onClick = { onPick(i); onDismiss() })
-                        Text(label)
+                        if (isRecommended) {
+                            Icon(Icons.Filled.AutoAwesome, "Recommended for this phone", Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                        }
+                        Text(label, color = if (isRecommended) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface)
                     }
                 }
             }

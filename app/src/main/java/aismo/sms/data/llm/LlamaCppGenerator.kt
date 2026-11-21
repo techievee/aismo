@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import aismo.sms.domain.llm.ChatMessage
 import aismo.sms.domain.llm.ChatRole
 import aismo.sms.domain.llm.GenerationException
+import aismo.sms.domain.llm.ModelOutput
 import aismo.sms.domain.llm.TextGenerator
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
@@ -44,7 +45,8 @@ class LlamaCppGenerator(private val context: Context, private val modelFile: Fil
                         if (why == "cancelled") throw CancellationException("generation cancelled")
                         throw GenerationException(why)
                     }
-                    String(reply, Charsets.UTF_8)
+                    // A thinking model may still reason before answering; the user wants the answer only.
+                    ModelOutput.withoutThinking(String(reply, Charsets.UTF_8))
                 } finally {
                     finished.set(true)
                     watcher.cancel()

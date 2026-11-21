@@ -68,6 +68,7 @@ data class SettingsRecord(
     val palette: String? = null, val pureBlack: Boolean? = null, val hiddenCategories: List<String>? = null,
     val sendDelaySeconds: Int? = null, val translateEnabled: Boolean? = null, val translateTargetLang: String? = null,
     val securedCategories: List<String>? = null, val unlockWindowMinutes: Int? = null, val unlockMethod: String? = null,
+    val groupSmsAndMms: Boolean? = null,
 ) : Record
 
 object BackupFormat {

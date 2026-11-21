@@ -96,6 +96,7 @@ class BackupService(
                         s.palette.key, s.pureBlack, s.hiddenCategories.toList(), s.sendDelaySeconds,
                         s.translateEnabled, s.translateTargetLang,
                         s.securedCategories.toList(), s.unlockWindowMinutes, s.unlockMethod.key,
+                        s.groupSmsAndMms,
                     ),
                 )
                 db.config().categories().forEach { w.json(CategoryRecord(it.key, it.name, it.icon)) }
@@ -307,6 +308,7 @@ class BackupService(
                             securedCategories = r.securedCategories?.toSet() ?: it.securedCategories,
                             unlockWindowMinutes = r.unlockWindowMinutes ?: it.unlockWindowMinutes,
                             unlockMethod = UnlockMethod.fromKey(r.unlockMethod) ?: it.unlockMethod,
+                            groupSmsAndMms = r.groupSmsAndMms ?: it.groupSmsAndMms,
                         )
                     }
                     settingsRestored = true
@@ -376,13 +378,28 @@ class BackupService(
         suspend fun finish(): RestoreSummary {
             if (canWrite) {
                 repository.syncNew()
+                // Make the stored keys match the restored "keep together or separate" choice, so the
+                // user's per-thread choices below can find their conversations.
+                repository.maintainGrouping()
                 for (m in starredSms) db.messages().findMatching(m.address, m.date, m.body)?.let { db.messages().setStarred(it, true) }
                 for (id in starredMms) if (db.messages().get(id) != null) db.messages().setStarred(id, true)
+                val present = db.conversations().allKeys().toSet()
+                // A phone that kept text and pictures together stored no `m:` conversations at all, so each of
+                // its records is a choice made on the merged thread. If this phone keeps them separate — older
+                // backups did not carry the choice — the same choices belong to both halves of the thread
+                // instead of being silently dropped.
+                val groupedBackup = conversations.none { ConversationKeys.isMmsKey(it.key) }
                 for (c in conversations) {
-                    if (db.conversations().get(c.key) == null) continue
-                    if (c.locked) repository.setConversationCategory(c.key, c.category)
-                    repository.setPinned(c.key, c.pinned)
-                    repository.setMuted(c.key, c.muted)
+                    val targets = LinkedHashSet<String>()
+                    if (c.key in present) targets += c.key
+                    // The same conversation can wear the other key shape after a restore: the SMS/MMS shape
+                    // follows the "keep together" choice, which the backup did not always carry.
+                    if (groupedBackup) targets += ConversationKeys.siblingForms(c.key).filter { it in present }
+                    for (t in targets) {
+                        if (c.locked) repository.setConversationCategory(t, c.category)
+                        repository.setPinned(t, c.pinned)
+                        repository.setMuted(t, c.muted)
+                    }
                 }
             }
             onProgress(total, total)

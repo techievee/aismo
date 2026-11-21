@@ -76,6 +76,19 @@ object ConversationKeys {
     /** True for the keys of multimedia conversations ([of] with `mms` true). */
     fun isMmsKey(key: String) = key.startsWith("m:") || key.startsWith("gm:")
 
+    /**
+     * The other side of the SMS/MMS border for the same conversation: `p:`↔`m:`, `s:`↔`m:`, `g:`↔`gm:`.
+     * `m:` has two, because its twin may be a phone or a business sender.
+     */
+    fun siblingForms(key: String): List<String> = when {
+        key.startsWith("gm:") -> listOf("g:" + key.substring(3))
+        key.startsWith("g:") -> listOf("gm:" + key.substring(2))
+        key.startsWith("p:") -> listOf("m:" + key.substring(2))
+        key.startsWith("s:") -> listOf("m:" + key.substring(2))
+        key.startsWith("m:") -> listOf("p:" + key.substring(2), "s:" + key.substring(2))
+        else -> emptyList()
+    }
+
     /** The sender token shown as a name for business senders (e.g. `VM-HDFCBK` -> `HDFCBK`). */
     fun senderToken(address: String): String = dltPrefix.find(address.trim())?.groupValues?.get(1) ?: address.trim()
 }

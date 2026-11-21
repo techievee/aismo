@@ -78,7 +78,7 @@ class MmsLiveNetworkTest {
         }
         assertEquals("sent, not failed", Telephony.Mms.MESSAGE_BOX_SENT, box)
         assertEquals("no SMS was sent alongside it", 0, c.provider.readAfter(0, 10).size)
-        assertTrue(c.mmsProvider.readById(MessageIds.raw(id))!!.transactionId!!.startsWith("tsol"))
+        assertTrue(c.mmsProvider.readById(MessageIds.raw(id))!!.transactionId!!.startsWith(aismo.sms.data.mms.MmsEngine.TID_LONG_TEXT))
     }
 
     @Test fun anMmsDownloadedThroughThePlatformIsDecodedAndStored() = runBlocking {

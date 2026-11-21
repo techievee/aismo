@@ -128,6 +128,7 @@ class ImportWorker(context: Context, params: WorkerParameters) : CoroutineWorker
         return runCatching {
             c.repository.syncNew()
             c.repository.migrateMmsKeys()
+            c.repository.maintainGrouping()
             c.repository.reparseStale()
             Workers.scheduleEmbedding(applicationContext)
         }.fold(onSuccess = { Result.success() }, onFailure = { Result.retry() })

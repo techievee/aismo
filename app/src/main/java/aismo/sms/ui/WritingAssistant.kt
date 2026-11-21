@@ -119,7 +119,14 @@ fun WritingAssistantSection(s: AppSettings) {
     val version by vm.installedVersion.collectAsStateWithLifecycle()
     val wantedPicked by vm.wantedModel.collectAsStateWithLifecycle()
     val backend = s.rephraseBackend
-    val wanted = wantedPicked ?: ModelCatalog.defaultFor(backend)
+    // The phone's memory, read once: it decides which model to hold out as the one that fits best.
+    val ramBytes = remember {
+        val info = android.app.ActivityManager.MemoryInfo()
+        context.getSystemService(android.app.ActivityManager::class.java)?.getMemoryInfo(info)
+        info.totalMem
+    }
+    val recommended = remember(ramBytes, backend) { ModelCatalog.recommended(ramBytes, backend) }
+    val wanted = wantedPicked ?: recommended
     val installed = remember(backend, version) { c.modelStore.installed(backend) }
     var engineDialog by remember { mutableStateOf(false) }
     var modelDialog by remember { mutableStateOf(false) }
@@ -133,19 +140,23 @@ fun WritingAssistantSection(s: AppSettings) {
             "A button in the message box rewrites your draft on this phone: fix everything, more polite, friendlier or shorter. You see the result before anything changes.",
             s.rephraseEnabled,
         ) { v -> scope.launch { c.settings.update { it.copy(rephraseEnabled = v) } } }
-        NavRow(Icons.Filled.Memory, accent, "Engine", "${backend.label}. ${backend.summary}") { engineDialog = true }
+        val best = ModelCatalog.bestEngine(ramBytes)
+        NavRow(Icons.Filled.Memory, accent, "Engine",
+            "${backend.label}. ${backend.summary}" + if (best != backend) " For this phone's memory, ${best.label} is the better fit." else " It is the better fit for this phone's memory.") { engineDialog = true }
         NavRow(
             Icons.Filled.Inventory2, accent, "Model",
             installed?.let { "${it.model.title} · ${it.model.sizeLabel} — ${it.model.ramNote}" } ?: "No ${backend.label} model yet. Pick one below.",
         ) {}
         NavRow(
             Icons.Filled.CloudDownload, accent, "Choose a model",
-            "Each model costs a different download size and RAM, so match it to this phone: bigger is smarter but slower and hungrier. Picking one opens your browser to download it — this app itself never goes online.",
+            (if (ramBytes > 0) "This phone has about ${ramBytes / 1_073_741_824L} GB of memory, so ${recommended.title} is the biggest model it should run well. " else "") +
+                "Each model costs a different download size and RAM: bigger is smarter but slower and hungrier. Picking one opens your browser to download it — this app itself never goes online.",
         ) { modelDialog = true }
         NavRow(Icons.Filled.FolderOpen, accent, "Choose model file", "Pick the downloaded ${wanted.fileName}. It is checked against a fixed checksum before it is used.", enabled = importing == null) {
             picker.launch(arrayOf("*/*"))
         }
-        NavRow(Icons.Filled.Delete, accent, "Remove model", "Delete the ${backend.label} model from this phone to free ${wanted.sizeLabel}.", enabled = installed != null && importing == null) { removeDialog = true }
+        // The size quoted is the one actually on disk, not the recommended one, so the number matches what freeing gives back.
+        NavRow(Icons.Filled.Delete, accent, "Remove model", "Delete the ${backend.label} model from this phone to free ${(installed?.model ?: wanted).sizeLabel}.", enabled = installed != null && importing == null) { removeDialog = true }
         Text(
             "Models run only on this phone and are kept in app storage that is not backed up. The RAM figures above are what a model holds while it runs — a phone that is running other apps has less to spare, so if a big model feels slow, a smaller one is the answer. A rewrite takes a couple of seconds on a recent phone after the first one.",
             Modifier.padding(horizontal = 16.dp, vertical = 8.dp), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -153,11 +164,13 @@ fun WritingAssistantSection(s: AppSettings) {
     }
 
     if (engineDialog) {
+        val best = ModelCatalog.bestEngine(ramBytes)
         ChoiceDialog(
             "Engine",
             LlmBackend.entries.map { "${it.label}: ${it.summary}" },
             LlmBackend.entries.indexOf(backend),
             { i -> scope.launch { c.settings.update { it.copy(rephraseBackend = LlmBackend.entries[i]) } } },
+            recommended = LlmBackend.entries.indexOf(best),
         ) { engineDialog = false }
     }
     if (modelDialog) {
@@ -169,11 +182,12 @@ fun WritingAssistantSection(s: AppSettings) {
             models.map { "${it.title} · ${it.sizeLabel} — ${it.ramNote}" },
             picked,
             { i -> justPicked = true; vm.chooseModel(models[i]) },
+            recommended = models.indexOfFirst { it == recommended }.takeIf { it >= 0 },
         ) {
             modelDialog = false
             if (justPicked) {
                 // Only a deliberate pick opens the browser; someone just comparing the RAM notes is left alone.
-                val target = vm.wantedModel.value ?: ModelCatalog.defaultFor(backend)
+                val target = vm.wantedModel.value ?: recommended
                 try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(target.downloadUrl)).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }
                 catch (_: ActivityNotFoundException) { vm.message.value = "No browser found. Download ${target.downloadUrl} on another device and copy it to this phone." }
             }

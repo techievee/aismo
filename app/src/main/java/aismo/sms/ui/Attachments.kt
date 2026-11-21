@@ -1,5 +1,6 @@
 package aismo.sms.ui
 
+import android.content.ClipboardManager
 import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -13,6 +14,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,6 +59,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.Dispatchers
@@ -240,15 +243,36 @@ fun rememberAttachmentPicker(onPicked: (List<Uri>) -> Unit): AttachmentPicker {
     }
 }
 
-/** The paperclip button with its "photo or video / file" menu. */
+/** The paperclip button with its "photo or video / file" menu; with [onPaste] it also offers pasting the clipboard. */
 @Composable
-fun AttachButton(picker: AttachmentPicker, enabled: Boolean = true) {
+fun AttachButton(picker: AttachmentPicker, enabled: Boolean = true, onPaste: ((String) -> Unit)? = null) {
     var open by remember { mutableStateOf(false) }
+    val context = LocalContext.current
     Box {
-        IconButton(onClick = { open = true }, enabled = enabled) { Icon(Icons.Filled.AttachFile, "Attach") }
+        // A filled circle like the send button, so the composer reads as one row of solid controls.
+        Box(
+            Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(if (enabled) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceVariant)
+                .clickable(enabled = enabled, role = Role.Button, onClick = { open = true }),
+            contentAlignment = Alignment.Center,
+        ) {
+            Icon(Icons.Filled.AttachFile, "Attach", tint = if (enabled) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
         DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
             DropdownMenuItem(text = { Text("Photo or video") }, onClick = { open = false; picker.pickMedia() })
             DropdownMenuItem(text = { Text("File") }, onClick = { open = false; picker.pickFile() })
+            if (onPaste != null) {
+                // The one attachment that needs no other app or storage: what is already on the clipboard.
+                DropdownMenuItem(text = { Text("Copy from clipboard") }, onClick = {
+                    open = false
+                    val clip = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                    val text = clip?.primaryClip?.takeIf { it.itemCount > 0 }?.getItemAt(0)?.text
+                    if (text.isNullOrBlank()) Toast.makeText(context, "The clipboard is empty", Toast.LENGTH_SHORT).show()
+                    else onPaste(text.toString())
+                })
+            }
         }
     }
 }

@@ -193,6 +193,9 @@ class IncomingProcessor(
             // The category the conversation is filed under now, which may be one the user chose, decides whether it may notify.
             val category = repository.categoryOf(m.message.conversationKey) ?: m.message.category
             if (category in s.mutedCategories) continue
+            // "Alert only for contacts": a sender outside the contact book never raises a notification, whether it
+            // would be spam, a code or an ordinary message. The message itself is still stored and sorted.
+            if (s.notifyContactsOnly && !inContacts(m.message.address)) continue
             val title = conversationTitle(m.message.address)
             if (m.isMmsPlaceholder) { notifications.showMmsPending(m, title); continue }
             val spam = m.parsed.spamScore >= SPAM_NOTIFY
@@ -203,6 +206,11 @@ class IncomingProcessor(
             }
         }
     }
+
+    /** A group counts as a contact if any of its members is in the book; a single address is looked up as is. */
+    private fun inContacts(address: String): Boolean =
+        if (ConversationKeys.isGroup(address)) ConversationKeys.participants(address).any { contacts.isInContacts(it) }
+        else contacts.isInContacts(address)
 
     /** Contact name, or the brand/number; a group is shown as its members' names. */
     private fun conversationTitle(address: String): String {

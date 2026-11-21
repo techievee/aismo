@@ -160,14 +160,24 @@ class MessageRepository(
     }
 
     /**
-     * One-time step for indexes built before SMS and MMS got separate threads: it moves the MMS messages of
-     * every mixed conversation to the MMS form of its key and opens the MMS twin of that conversation with
-     * what the user had chosen for the old one (a manually locked category, pin and mute) carried across.
-     * Running it again does nothing.
+     * One-time step for indexes built before SMS and MMS got separate threads: it runs the split once and
+     * stamps the index, so it never runs again.
      */
-    suspend fun migrateMmsKeys(): Int = syncLock.withLock {
+    suspend fun migrateMmsKeys(): Int {
+        if (settings.mmsKeyVersion() >= MMS_KEY_VERSION) return 0
+        val moved = splitMmsKeys()
+        settings.setMmsKeyVersion(MMS_KEY_VERSION)
+        return moved
+    }
+
+    /**
+     * Moves the MMS messages of every mixed conversation to the MMS form of its key and opens the MMS twin of
+     * that conversation with what the user had chosen for the old one (a manually locked category, pin and
+     * mute) carried across. Re-runnable: a row already in the MMS form is left alone, and a twin that exists
+     * is not replaced.
+     */
+    suspend fun splitMmsKeys(): Int = syncLock.withLock {
         withContext(Dispatchers.IO) {
-            if (settings.mmsKeyVersion() >= MMS_KEY_VERSION) return@withContext 0
             val moved = mutableMapOf<String, String>() // old conversation key -> MMS twin key
             var cursor = 0L
             while (true) {
@@ -198,9 +208,68 @@ class MessageRepository(
                 recompute(twinKey)
                 recompute(old) // a conversation left with no SMS at all deletes itself here
             }
-            settings.setMmsKeyVersion(MMS_KEY_VERSION)
             moved.size
         }
+    }
+
+    /**
+     * The other direction of [splitMmsKeys], for the "keep together" choice: moves the MMS messages of every
+     * MMS conversation back to the shared form of its key and merges the MMS conversation into the one its
+     * SMS messages use — pin, mute, block and a manually locked category carried across. Re-runnable: a row
+     * already in the shared form is left alone.
+     */
+    suspend fun groupMmsKeys(): Int = syncLock.withLock {
+        withContext(Dispatchers.IO) {
+            val merged = mutableMapOf<String, String>() // MMS conversation key -> shared key it merges into
+            var cursor = 0L
+            while (true) {
+                val page = messages.mmsAfter(cursor, BATCH)
+                if (page.isEmpty()) break
+                val rekeyed = page.map { it to ConversationKeys.of(it.address, mms = false) }
+                    .filter { (m, newKey) -> ConversationKeys.isMmsKey(m.conversationKey) && newKey != m.conversationKey }
+                if (rekeyed.isNotEmpty()) {
+                    messages.upsertAll(rekeyed.map { (m, newKey) -> m.copy(conversationKey = newKey) })
+                    rekeyed.forEach { (m, newKey) -> merged[m.conversationKey] = newKey }
+                }
+                cursor = page.last().id
+            }
+            for ((mmsKey, sharedKey) in merged) {
+                val mmsConv = conversations.get(mmsKey)
+                val sharedConv = conversations.get(sharedKey)
+                when {
+                    mmsConv != null && sharedConv != null -> {
+                        // The category the user locked by hand wins; an unlocked one re-votes below over the merged messages.
+                        val locked = if (sharedConv.categoryLocked) sharedConv else if (mmsConv.categoryLocked) mmsConv else null
+                        conversations.upsert(
+                            sharedConv.copy(
+                                isPinned = sharedConv.isPinned || mmsConv.isPinned,
+                                isMuted = sharedConv.isMuted || mmsConv.isMuted,
+                                isBlocked = sharedConv.isBlocked || mmsConv.isBlocked,
+                                categoryLocked = locked != null,
+                                category = locked?.category ?: sharedConv.category,
+                            ),
+                        )
+                    }
+                    mmsConv != null -> conversations.upsert(mmsConv.copy(key = sharedKey)) // no shared conversation yet: this one simply becomes it
+                }
+                conversations.delete(mmsKey)
+                recompute(sharedKey)
+            }
+            merged.size
+        }
+    }
+
+    /**
+     * Moves the stored keys to the shape the current "keep together or separate" choice wants, merging or
+     * splitting conversations as needed. A no-op when they already match, so it is safe to run whenever the
+     * setting may have changed, including at startup after an interrupted run.
+     */
+    suspend fun maintainGrouping(): Int {
+        val grouped = settings.current().groupSmsAndMms
+        if (settings.groupingApplied() == grouped) return 0
+        val moved = if (grouped) groupMmsKeys() else splitMmsKeys()
+        settings.setGroupingApplied(grouped)
+        return moved
     }
 
     /** Re-parses every message with the current rules (after rules or categories change). */
@@ -224,6 +293,8 @@ class MessageRepository(
     private suspend fun ingest(raws: List<RawSms>, forceParse: Boolean = false, keyHints: Map<Long, String> = emptyMap()): List<IngestedMessage> {
         if (raws.isEmpty()) return emptyList()
         val rules = db.config().enabledRules().map { UserRule(it.senderContains, it.bodyContains, it.categoryKey, it.merchant) }
+        // A picture message takes the MMS form of its key only while SMS and MMS are kept in separate threads.
+        val grouped = settings.current().groupSmsAndMms
         val existing = messages.getAll(raws.map { it.id }).associateBy { it.id }
         val ingested = mutableListOf<IngestedMessage>()
         val entities = ArrayList<MessageEntity>(raws.size)
@@ -235,7 +306,7 @@ class MessageRepository(
         for (r in raws) {
             if (r.type == 3) continue // drafts live only in the provider
             // A not-yet-stored row goes where it was sent from; a row the index already knows keeps its conversation.
-            val key = keyHints[r.id]?.takeIf { existing[r.id] == null } ?: ConversationKeys.of(r.address, MessageIds.isMms(r.id))
+            val key = keyHints[r.id]?.takeIf { existing[r.id] == null } ?: ConversationKeys.of(r.address, MessageIds.isMms(r.id) && !grouped)
             keys += key
             val prev = existing[r.id]
             val attachments = r.attachments

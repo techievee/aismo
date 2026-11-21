@@ -12,9 +12,11 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
@@ -44,7 +46,6 @@ import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.Icon
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
@@ -65,12 +66,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
-import androidx.compose.material.icons.filled.SimCard
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
@@ -80,6 +84,7 @@ import androidx.compose.ui.text.withLink
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import aismo.sms.R
 import aismo.sms.container
 import aismo.sms.data.db.AttachmentEntity
 import aismo.sms.data.db.MmsDownloadEntity
@@ -91,6 +96,7 @@ import aismo.sms.domain.parser.TxnKind
 import aismo.sms.domain.translate.LanguageGuesser
 import aismo.sms.telephony.NotificationCenter
 import aismo.sms.ui.theme.categoryColor
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -132,6 +138,7 @@ fun ThreadScreen(key: String, addressHint: String?, onBack: () -> Unit, onOpenSe
     }
     val translate = rememberTranslateController()
     val snackbar = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
     val openAttachment = rememberAttachmentOpener()
     val saveAttachment = rememberAttachmentSaver()
     val picker = rememberAttachmentPicker(vm::addAttachments)
@@ -173,6 +180,12 @@ fun ThreadScreen(key: String, addressHint: String?, onBack: () -> Unit, onOpenSe
                     if (canReply && !isGroup) {
                         IconButton(onClick = { context.startActivity(Intent(Intent.ACTION_DIAL, Uri.parse("tel:" + Uri.encode(address)))) }) {
                             Icon(Icons.Filled.Call, "Call")
+                        }
+                        IconButton(onClick = {
+                            val opened = context.openWhatsApp(address, draft)
+                            if (!opened) scope.launch { snackbar.showSnackbar("Couldn't open WhatsApp") }
+                        }) {
+                            Icon(ImageVector.vectorResource(R.drawable.ic_whatsapp), "Open in WhatsApp", tint = WhatsAppGreen)
                         }
                     }
                     Box {
@@ -445,48 +458,46 @@ private fun Composer(
 ) {
     val (segments, remaining) = smsCounter(text)
     Column {
-    if (attachments.isNotEmpty()) AttachmentStrip(attachments, onRemoveAttachment)
-    Row(Modifier.fillMaxWidth().padding(8.dp), verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
-        AttachButton(picker)
-        Column(Modifier.weight(1f)) {
-            if (sims.size > 1) {
-                var picking by remember { mutableStateOf(false) }
-                val current = sims.firstOrNull { it.subId == selectedSubId } ?: sims.first()
-                // Two lines, so a long carrier name and the full number both fit: "SIM 2 · Telstra" over "+61 422 000 222".
-                OutlinedCard(onClick = { picking = true }, modifier = Modifier.padding(bottom = 4.dp)) {
-                    Row(Modifier.padding(horizontal = 12.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Icon(Icons.Filled.SimCard, contentDescription = null, modifier = Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-                        Column {
-                            Text("Send from ${current.title}", style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(current.detail, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                        }
-                    }
+        if (attachments.isNotEmpty()) AttachmentStrip(attachments, onRemoveAttachment)
+        // The field gets a row to itself, so it never competes with the buttons for width.
+        OutlinedTextField(
+            value = text, onValueChange = onText,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp),
+            maxLines = 5,
+            placeholder = { Text("Message") },
+            supportingText = when {
+                route == aismo.sms.data.SendRoute.MMS_LONG_TEXT -> { { Text("Long text: sends as one MMS · $segments SMS parts avoided") } }
+                route == aismo.sms.data.SendRoute.MMS -> { { Text("Sends as MMS") } }
+                segments > 1 || remaining < 20 && text.isNotEmpty() -> { { Text("$remaining left · $segments SMS") } }
+                else -> null
+            },
+        )
+        // The controls share a row of their own under the field.
+        BoxWithConstraints {
+            // The chip with its number plus every button and the padding needs about 326dp of row; on
+            // anything narrower only the icon, so the row never overflows.
+            val named = maxWidth >= 326.dp
+            Row(Modifier.fillMaxWidth().padding(start = 8.dp, end = 8.dp, bottom = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                if (sims.size > 1) {
+                    val current = sims.firstOrNull { it.subId == selectedSubId } ?: sims.first()
+                    if (named) SimChip(current, sims, onSim)
+                    else SimIconButton(current, sims, onSim)
                 }
-                if (picking) SimPickerDialog("Send from", sims, current.subId, allowSystemDefault = false, onPick = onSim) { picking = false }
+                AttachButton(picker, onPaste = { onText(text + it) })
+                if (rephrase != null) RephraseButton(rephrase, text)
+                Spacer(Modifier.weight(1f))
+                // Tap to send (after the hold, if one is set in Settings); press and hold to send straight away.
+                val canSend = text.isNotBlank() || attachments.isNotEmpty()
+                val haptics = LocalHapticFeedback.current
+                Box(
+                    Modifier.size(48.dp).clip(CircleShape).combinedClickable(
+                        enabled = canSend, role = Role.Button, onClick = onSend,
+                        onLongClickLabel = "Send now, without waiting", onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onSendNow() },
+                    ),
+                    contentAlignment = Alignment.Center,
+                ) { Icon(Icons.AutoMirrored.Filled.Send, "Send", tint = LocalContentColor.current.copy(alpha = if (canSend) 1f else 0.38f)) }
             }
-            OutlinedTextField(
-                value = text, onValueChange = onText, modifier = Modifier.fillMaxWidth(), maxLines = 5,
-                placeholder = { Text("Message") },
-                supportingText = when {
-                    route == aismo.sms.data.SendRoute.MMS_LONG_TEXT -> { { Text("Long text: sends as one MMS · $segments SMS parts avoided") } }
-                    route == aismo.sms.data.SendRoute.MMS -> { { Text("Sends as MMS") } }
-                    segments > 1 || remaining < 20 && text.isNotEmpty() -> { { Text("$remaining left · $segments SMS") } }
-                    else -> null
-                },
-            )
         }
-        if (rephrase != null) RephraseButton(rephrase, text)
-        // Tap to send (after the hold, if one is set in Settings); press and hold to send straight away.
-        val canSend = text.isNotBlank() || attachments.isNotEmpty()
-        val haptics = LocalHapticFeedback.current
-        Box(
-            Modifier.size(48.dp).clip(CircleShape).combinedClickable(
-                enabled = canSend, role = Role.Button, onClick = onSend,
-                onLongClickLabel = "Send now, without waiting", onLongClick = { haptics.performHapticFeedback(HapticFeedbackType.LongPress); onSendNow() },
-            ),
-            contentAlignment = Alignment.Center,
-        ) { Icon(Icons.AutoMirrored.Filled.Send, "Send", tint = LocalContentColor.current.copy(alpha = if (canSend) 1f else 0.38f)) }
-    }
     }
 }
 

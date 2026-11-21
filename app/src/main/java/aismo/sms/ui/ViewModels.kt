@@ -108,6 +108,7 @@ class InboxViewModel(private val c: AppContainer) : ViewModel() {
             importProgress.value = 0
             runCatching { c.repository.syncNew { importProgress.value = it } }
             runCatching { c.repository.migrateMmsKeys() }
+            runCatching { c.repository.maintainGrouping() }
             runCatching { c.repository.reparseStale() }
             importProgress.value = null
         }
@@ -356,14 +357,18 @@ data class SearchResults(val keyword: List<MessageEntity> = emptyList(), val sim
 class SearchViewModel(private val c: AppContainer) : ViewModel() {
     val query = MutableStateFlow("")
 
+    /** Checked in the search box, and only then does the model run: until it is, a search is plain word matching. */
+    val useSemantic = MutableStateFlow(false)
+
     /** The keyword matches arrive first; the ones found by meaning follow when the model has answered. */
-    val results: StateFlow<SearchResults> = query.debounce(250).transformLatest { q ->
-        if (q.isBlank()) { emit(SearchResults()); return@transformLatest }
-        val keyword = c.repository.search(q)
-        val smart = c.settings.current().smartSearch
-        emit(SearchResults(keyword, searching = smart))
-        if (smart) emit(SearchResults(keyword, c.semanticIndex.similarMessages(q, exclude = keyword.mapTo(HashSet()) { it.id })))
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT), SearchResults())
+    val results: StateFlow<SearchResults> = combine(query, useSemantic) { q, semantic -> q to semantic }
+        .debounce(250).transformLatest { (q, semantic) ->
+            if (q.isBlank()) { emit(SearchResults()); return@transformLatest }
+            val keyword = c.repository.search(q)
+            val smart = semantic && c.settings.current().smartSearch
+            emit(SearchResults(keyword, searching = smart))
+            if (smart) emit(SearchResults(keyword, c.semanticIndex.similarMessages(q, exclude = keyword.mapTo(HashSet()) { it.id })))
+        }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT), SearchResults())
 
     val smartSearch: StateFlow<SmartSearchStatus> = c.smartSearchStatus()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT), SmartSearchStatus())

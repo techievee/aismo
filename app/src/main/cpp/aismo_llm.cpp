@@ -23,11 +23,20 @@ namespace {
 
 constexpr int kBatch = 512;
 
+// The Qwen special tokens, as the model's own chat template writes them. Plain C strings, not std::string:
+// the release linker drops the static constructor that would initialise the latter, leaving them empty at run time.
+constexpr char kImStart[] = "<|im_start|>";
+constexpr char kImEnd[] = "<|im_end|>";
+constexpr char kThinkOpen[] = "<think>";
+constexpr char kThinkClose[] = "think>";
+
 struct Engine {
     llama_model *model = nullptr;
     llama_context *ctx = nullptr;
     const llama_vocab *vocab = nullptr;
     std::string chat_template;           // the model's own template, empty if it has none
+    bool qwen = false;                  // the model family, from the shape of its template
+    bool qwen3 = false;                 // (Qwen3 templates carry the reasoning-tag logic; Qwen2.x carry a bos token)
     int n_ctx = 0;
     std::vector<llama_token> cache;      // tokens whose results are in the context's memory, for prefix reuse
     std::atomic<bool> cancel{false};
@@ -65,7 +74,32 @@ std::string bytes_to_std(JNIEnv *env, jbyteArray a) {
 }
 
 // The prompt text for a chat: the model's template when llama.cpp understands it, plain ChatML otherwise.
+// Qwen's template is jinja that this llama.cpp does not apply, so for Qwen models it is written out by hand,
+// in the model's own format: each turn is the im_start tag, the role, the text, an im_end tag. For Qwen3 the
+// final turn is prefilled with an empty reasoning block — the model's "no thinking" mode — so its reasoning never
+// reaches the user; Qwen2.x has no reasoning block of its own and the final turn simply opens.
+bool format_qwen(Engine *e, const std::vector<std::string> &roles, const std::vector<std::string> &contents, std::string &text) {
+    if (!e->qwen) return false;
+    text.clear();
+    for (size_t i = 0; i < roles.size(); i++) {
+        text += kImStart + roles[i] + "\n" + contents[i] + kImEnd + "\n";
+    }
+    if (roles.back() != "assistant") {
+        text += kImStart;
+        text += "assistant\n";
+        if (e->qwen3) {
+            text += kThinkOpen;
+            text += "\n\n";
+            text += kThinkClose;
+            text += "\n\n";
+        }
+    }
+    return true;
+}
+
 std::string format_chat(Engine *e, const std::vector<std::string> &roles, const std::vector<std::string> &contents) {
+    std::string text;
+    if (format_qwen(e, roles, contents, text)) return text;
     std::vector<llama_chat_message> messages(roles.size());
     for (size_t i = 0; i < roles.size(); i++) messages[i] = {roles[i].c_str(), contents[i].c_str()};
     if (!e->chat_template.empty()) {
@@ -77,7 +111,7 @@ std::string format_chat(Engine *e, const std::vector<std::string> &roles, const 
         }
         if (n >= 0) return std::string(buffer.data(), (size_t) n);
     }
-    std::string text;
+    text.clear();
     for (size_t i = 0; i < roles.size(); i++) text += "<|im_start|>" + roles[i] + "\n" + contents[i] + "<|im_end|>\n";
     return text + "<|im_start|>assistant\n";
 }
@@ -122,6 +156,12 @@ JNIEXPORT jlong JNICALL Java_aismo_sms_data_llm_LlamaNative_load(JNIEnv *env, jo
     e->vocab = llama_model_get_vocab(model);
     e->n_ctx = (int) llama_n_ctx(ctx);
     if (const char *tmpl = llama_model_chat_template(model, nullptr)) e->chat_template = tmpl;
+    // The v1.0.0 template engine above does not know Qwen templates, so the family is recognised by its shape:
+    // the im_start turns mark a Qwen one, and the reasoning tags mark a Qwen3 one.
+    if (e->chat_template.find(kImStart) != std::string::npos) {
+        e->qwen = true;
+        e->qwen3 = e->chat_template.find(kThinkOpen) != std::string::npos;
+    }
     return reinterpret_cast<jlong>(e);
 }
 
@@ -173,11 +213,13 @@ JNIEXPORT jbyteArray JNICALL Java_aismo_sms_data_llm_LlamaNative_generate(
     }
 
     const std::string prompt = format_chat(e, role_list, content_list);
+    // A Qwen prompt already begins with the bos token, so no second one is added.
+    const bool add_bos = llama_vocab_get_add_bos(e->vocab) && !e->qwen;
     std::vector<llama_token> tokens((size_t) prompt.size() + 8);
-    int n = llama_tokenize(e->vocab, prompt.c_str(), (int) prompt.size(), tokens.data(), (int) tokens.size(), llama_vocab_get_add_bos(e->vocab), true);
+    int n = llama_tokenize(e->vocab, prompt.c_str(), (int) prompt.size(), tokens.data(), (int) tokens.size(), add_bos, true);
     if (n < 0) {
         tokens.resize((size_t) -n);
-        n = llama_tokenize(e->vocab, prompt.c_str(), (int) prompt.size(), tokens.data(), (int) tokens.size(), llama_vocab_get_add_bos(e->vocab), true);
+        n = llama_tokenize(e->vocab, prompt.c_str(), (int) prompt.size(), tokens.data(), (int) tokens.size(), add_bos, true);
     }
     if (n <= 0) { set_error("could not read the prompt"); return nullptr; }
     tokens.resize((size_t) n);

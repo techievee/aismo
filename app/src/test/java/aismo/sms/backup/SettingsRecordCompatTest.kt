@@ -82,4 +82,14 @@ class SettingsRecordCompatTest {
         assertEquals(10, back.unlockWindowMinutes)
         assertEquals("pin", back.unlockMethod)
     }
+
+    @Test fun anOlderRecordHasNoGroupingChoice() {
+        assertNull((BackupFormat.decodeRecord(oldJson.toByteArray()) as SettingsRecord).groupSmsAndMms)
+    }
+
+    @Test fun theGroupingChoiceRoundTripsAndAnExplicitFalseIsNotAbsent() {
+        fun record(v: Boolean) = SettingsRecord(0, false, true, false, 24, false, true, true, false, true, true, true, groupSmsAndMms = v)
+        assertEquals(true, (BackupFormat.decodeRecord(BackupFormat.encodeRecord(record(true))) as SettingsRecord).groupSmsAndMms)
+        assertEquals("an explicit false must not decode as absent", false, (BackupFormat.decodeRecord(BackupFormat.encodeRecord(record(false))) as SettingsRecord).groupSmsAndMms)
+    }
 }

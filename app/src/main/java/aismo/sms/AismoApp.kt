@@ -16,6 +16,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import aismo.sms.backup.BackupService
 import aismo.sms.backup.KeystoreVault
@@ -188,6 +190,12 @@ class AismoApp : Application() {
         container = AppContainer(this)
         container.notifications.createChannels()
         container.scope.launch { runCatching { container.mmsTransport.cleanOldFiles(); container.attachmentStore.cleanOldFiles() } }
+        // The stored keys must follow the "keep together or separate" choice; a run interrupted by a crash
+        // converges when this fires again at the next startup, because the bookkeeping flag was never set.
+        container.scope.launch {
+            container.settings.settings.map { it.groupSmsAndMms }.distinctUntilChanged()
+                .collect { runCatching { container.repository.maintainGrouping() } }
+        }
         Workers.schedule(this)
         observeProvider()
         // A held message must not wait where nobody can undo it: when the app leaves the screen it goes out.

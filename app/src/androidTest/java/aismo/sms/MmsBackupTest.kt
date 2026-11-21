@@ -17,8 +17,10 @@ import org.junit.runner.RunWith
 import aismo.sms.backup.BackupCrypto
 import aismo.sms.backup.BackupDamagedException
 import aismo.sms.backup.BackupFormat
+import aismo.sms.backup.ConversationRecord
 import aismo.sms.backup.MessageRecord
 import aismo.sms.backup.MetaRecord
+import aismo.sms.backup.SettingsRecord
 import aismo.sms.data.db.MessageIds
 import aismo.sms.domain.mms.MmsAddress
 import aismo.sms.domain.mms.MmsCharset
@@ -62,6 +64,21 @@ class MmsBackupTest {
             ),
         )
         val id = c.mmsProvider.insertRetrieved(pdu, -1, atMs, setOf(from, other))
+        assertTrue("provider must accept the MMS", id > 0)
+        return id
+    }
+
+    /** The same, addressed to me alone: a one-to-one thread, not a group. */
+    private fun oneToOne(from: String, text: String, image: ByteArray, atMs: Long): Long {
+        val pdu = MmsPdu(
+            type = MmsType.RETRIEVE_CONF, transactionId = "1to1-$atMs", from = MmsAddress.of(from), to = listOf(MmsAddress.of(me)),
+            subject = "Backup me", dateSeconds = atMs / 1000, contentType = "application/vnd.wap.multipart.related",
+            parts = listOf(
+                MmsPart("text/plain", "text_0.txt", "text_0", MmsCharset.UTF_8, text.toByteArray()),
+                MmsPart("image/jpeg", "photo.jpg", "photo", null, image),
+            ),
+        )
+        val id = c.mmsProvider.insertRetrieved(pdu, -1, atMs, setOf(from))
         assertTrue("provider must accept the MMS", id > 0)
         return id
     }
@@ -217,7 +234,7 @@ class MmsBackupTest {
     @Test fun aSentMmsWhoseDateTheSystemRewritesIsNotDuplicatedByARestore() = runBlocking {
         val id = c.mmsProvider.insertOutgoing(
             listOf(friend), null, listOf(MmsPart("text/plain", "text_0.txt", "text_0", MmsCharset.UTF_8, "stamped by the platform".toByteArray())),
-            -1, "tsol-date-1",
+            -1, "aism-date-1",
         )
         assertTrue(id > 0)
         c.repository.syncNew()
@@ -240,5 +257,77 @@ class MmsBackupTest {
         assertEquals("a message that is already on the phone is never added again", 0, r.mmsAdded)
         assertEquals(1, r.mmsSkipped)
         assertEquals(1, c.mmsProvider.allIds()!!.size)
+    }
+
+    @Test fun aHiddenMmsThreadSurvivesARestoreOnANewPhone() = runBlocking {
+        // The phone being backed up: text and pictures kept together, and the thread hidden.
+        c.settings.update { it.copy(groupSmsAndMms = true) }
+        c.settings.setGroupingApplied(false)
+        val now = System.currentTimeMillis() / 1000 * 1000
+        c.provider.insertIncoming(friend, "an sms in the same thread", now - 9_000, now - 9_000, -1)
+        oneToOne(friend, "a photo message", randomBytes(10_000, 11), now - 4_000)
+        c.repository.syncNew()
+        c.repository.maintainGrouping()
+        val pKey = aismo.sms.domain.ConversationKeys.of(friend)
+        assertEquals("with the choice on, the text and the picture are one thread", pKey, c.db.conversations().allKeys().single())
+        c.repository.setConversationCategory(pKey, "custom:hidden1234")
+        c.repository.setPinned(pKey, true)
+        c.repository.setMuted(pKey, true)
+
+        val (bytes, _) = c.backup.build(pass, includeMms = true)
+        assertEquals(2, c.db.messages().countSms() + c.db.messages().countBackupableMms())
+
+        // The new phone: no history, and the choice has not been made yet.
+        wipe()
+        c.settings.update { it.copy(groupSmsAndMms = false) }
+        c.settings.setGroupingApplied(false)
+
+        val r = c.backup.restore(bytes, pass)
+        assertEquals(1, r.messagesAdded)
+        assertEquals(1, r.mmsAdded)
+        assertEquals("the restored thread is merged again, as the backup phone kept it", pKey, c.db.conversations().allKeys().single())
+        val conv = c.db.conversations().get(pKey)!!
+        assertEquals("the category the user chose survives the restore", "custom:hidden1234", conv.category)
+        assertTrue("the choice stays locked", conv.categoryLocked)
+        assertTrue(conv.isPinned)
+        assertTrue(conv.isMuted)
+    }
+
+    @Test fun anOlderBackupOfAGroupedPhoneReachesBothHalvesOfASeparatedThread() = runBlocking {
+        // The phone as it stands before the restore: text and pictures kept separate.
+        c.settings.update { it.copy(groupSmsAndMms = false) }
+        c.settings.setGroupingApplied(false)
+        val now = System.currentTimeMillis() / 1000 * 1000
+        c.provider.insertIncoming(friend, "an sms in the same thread", now - 9_000, now - 9_000, -1)
+        oneToOne(friend, "a photo message", randomBytes(10_000, 12), now - 4_000)
+        c.repository.syncNew()
+        val pKey = aismo.sms.domain.ConversationKeys.of(friend)
+        val mKey = aismo.sms.domain.ConversationKeys.of(friend, mms = true)
+        assertEquals(setOf(pKey, mKey), c.db.conversations().allKeys().toSet())
+
+        // An older version kept the thread together but could not write the choice down: its backup
+        // carries the merged thread's choices under the p: key, and no grouping field at all.
+        val old = BackupCrypto.encrypt(
+            BackupFormat.encode(
+                sequenceOf(
+                    MetaRecord(1, now, "old", 0),
+                    SettingsRecord(0, false, true, false, 24, false, true, true, false, true, true, true),
+                    ConversationRecord(pKey, "custom:hidden1234", true, true, true),
+                ),
+            ),
+            pass,
+        )
+        val r = c.backup.restore(old, pass)
+        assertEquals(0, r.messagesAdded)
+
+        val p = c.db.conversations().get(pKey)!!
+        val m = c.db.conversations().get(mKey)!!
+        assertEquals("the picture half must not be left behind", "custom:hidden1234", m.category)
+        assertTrue(m.categoryLocked)
+        assertTrue(m.isPinned)
+        assertTrue(m.isMuted)
+        assertEquals("custom:hidden1234", p.category)
+        assertTrue(p.isPinned)
+        assertTrue(p.isMuted)
     }
 }

@@ -61,6 +61,8 @@ data class AppSettings(
     val reminderNotifications: Boolean = true,
     val budgetAlerts: Boolean = true,
     val protectionAlerts: Boolean = true,
+    /** When on, a notification only goes out for senders that are in the contact book. */
+    val notifyContactsOnly: Boolean = false,
     val defaultSubId: Int = -1,
     val autoBackup: Boolean = false,
     val autoBackupDays: Int = 1,
@@ -69,6 +71,11 @@ data class AppSettings(
     val onboardingDone: Boolean = false,
     val autoDownloadMms: Boolean = true,
     val downloadMmsWhileRoaming: Boolean = false,
+    /**
+     * Whether SMS and MMS from the same sender share one thread. Off (the default) keeps them in separate
+     * threads, one `p:`-keyed and one `m:`-keyed per sender; on, both live under the plain key.
+     */
+    val groupSmsAndMms: Boolean = false,
     /** Your own number, used to tell you apart from the other people in a group MMS. Blank means auto-detect. */
     val ownNumber: String = "",
     /** Send texts longer than the threshold as one MMS instead of a chain of SMS segments. */
@@ -125,6 +132,7 @@ class SettingsRepository(private val context: Context) {
         val reminderNotifications = booleanPreferencesKey("reminder_notifications")
         val budgetAlerts = booleanPreferencesKey("budget_alerts")
         val protectionAlerts = booleanPreferencesKey("protection_alerts")
+        val notifyContactsOnly = booleanPreferencesKey("notify_contacts_only")
         val defaultSubId = intPreferencesKey("default_sub_id")
         val autoBackup = booleanPreferencesKey("auto_backup")
         val autoBackupDays = intPreferencesKey("auto_backup_days")
@@ -133,6 +141,7 @@ class SettingsRepository(private val context: Context) {
         val onboardingDone = booleanPreferencesKey("onboarding_done")
         val autoDownloadMms = booleanPreferencesKey("auto_download_mms")
         val downloadMmsWhileRoaming = booleanPreferencesKey("download_mms_roaming")
+        val groupSmsAndMms = booleanPreferencesKey("group_sms_and_mms")
         val ownNumber = stringPreferencesKey("own_number")
         val longTextToMms = booleanPreferencesKey("long_text_to_mms")
         val longTextSegments = intPreferencesKey("long_text_segments")
@@ -149,6 +158,7 @@ class SettingsRepository(private val context: Context) {
         val importCompleted = booleanPreferencesKey("import_completed")
         val parserVersionApplied = intPreferencesKey("parser_version_applied")
         val mmsKeyVersion = intPreferencesKey("mms_key_version")
+        val groupingApplied = booleanPreferencesKey("grouping_applied")
     }
 
     val settings: Flow<AppSettings> = context.dataStore.data.map { p ->
@@ -172,6 +182,7 @@ class SettingsRepository(private val context: Context) {
             reminderNotifications = p[K.reminderNotifications] ?: d.reminderNotifications,
             budgetAlerts = p[K.budgetAlerts] ?: d.budgetAlerts,
             protectionAlerts = p[K.protectionAlerts] ?: d.protectionAlerts,
+            notifyContactsOnly = p[K.notifyContactsOnly] ?: d.notifyContactsOnly,
             defaultSubId = p[K.defaultSubId] ?: d.defaultSubId,
             autoBackup = p[K.autoBackup] ?: d.autoBackup,
             autoBackupDays = p[K.autoBackupDays] ?: d.autoBackupDays,
@@ -180,6 +191,7 @@ class SettingsRepository(private val context: Context) {
             onboardingDone = p[K.onboardingDone] ?: d.onboardingDone,
             autoDownloadMms = p[K.autoDownloadMms] ?: d.autoDownloadMms,
             downloadMmsWhileRoaming = p[K.downloadMmsWhileRoaming] ?: d.downloadMmsWhileRoaming,
+            groupSmsAndMms = p[K.groupSmsAndMms] ?: d.groupSmsAndMms,
             ownNumber = p[K.ownNumber] ?: d.ownNumber,
             longTextToMms = p[K.longTextToMms] ?: d.longTextToMms,
             longTextSegments = p[K.longTextSegments] ?: d.longTextSegments,
@@ -219,6 +231,7 @@ class SettingsRepository(private val context: Context) {
             p[K.reminderNotifications] = next.reminderNotifications
             p[K.budgetAlerts] = next.budgetAlerts
             p[K.protectionAlerts] = next.protectionAlerts
+            p[K.notifyContactsOnly] = next.notifyContactsOnly
             p[K.defaultSubId] = next.defaultSubId
             p[K.autoBackup] = next.autoBackup
             p[K.autoBackupDays] = next.autoBackupDays
@@ -227,6 +240,7 @@ class SettingsRepository(private val context: Context) {
             p[K.onboardingDone] = next.onboardingDone
             p[K.autoDownloadMms] = next.autoDownloadMms
             p[K.downloadMmsWhileRoaming] = next.downloadMmsWhileRoaming
+            p[K.groupSmsAndMms] = next.groupSmsAndMms
             p[K.ownNumber] = next.ownNumber
             p[K.longTextToMms] = next.longTextToMms
             p[K.longTextSegments] = next.longTextSegments
@@ -250,4 +264,7 @@ class SettingsRepository(private val context: Context) {
     suspend fun setParserVersionApplied(v: Int) = context.dataStore.edit { it[K.parserVersionApplied] = v }.let { }
     suspend fun mmsKeyVersion(): Int = context.dataStore.data.first()[K.mmsKeyVersion] ?: 0
     suspend fun setMmsKeyVersion(v: Int) = context.dataStore.edit { it[K.mmsKeyVersion] = v }.let { }
+    /** Whether the stored keys already match the group/separate choice (false until the first migration ran). */
+    suspend fun groupingApplied(): Boolean = context.dataStore.data.first()[K.groupingApplied] ?: false
+    suspend fun setGroupingApplied(v: Boolean) = context.dataStore.edit { it[K.groupingApplied] = v }.let { }
 }

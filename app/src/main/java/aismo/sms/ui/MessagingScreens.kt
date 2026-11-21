@@ -11,21 +11,23 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
-import androidx.compose.material.icons.filled.SimCard
+import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material3.Card
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ListItem
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedCard
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
@@ -47,7 +49,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.SpanStyle
@@ -57,11 +61,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import aismo.sms.R
 import aismo.sms.container
 import aismo.sms.data.db.MessageEntity
 import aismo.sms.data.SendOutcome
@@ -122,6 +128,19 @@ fun NewMessageScreen(initialTo: String, initialBody: String, onBack: () -> Unit,
     val suggestions by produceState(emptyList<aismo.sms.data.sms.ContactDirectory.Match>(), typing) {
         value = if (typing.length < 2) emptyList() else { delay(150); withContext(Dispatchers.IO) { c.contacts.search(typing) } }
     }
+    // The people the user writes to most, newest first: a quick row under the To field, instead of retyping the number.
+    val recents by produceState(emptyList<aismo.sms.data.sms.ContactDirectory.Match>(), Unit) {
+        value = withContext(Dispatchers.IO) {
+            buildList {
+                for (e in c.db.conversations().observeAll().first()) {
+                    if (ConversationKeys.isGroup(e.address)) continue
+                    if (any { it.number == e.address }) continue
+                    add(aismo.sms.data.sms.ContactDirectory.Match(c.contacts.nameFor(e.address) ?: e.address, e.address))
+                    if (size >= 10) break
+                }
+            }
+        }
+    }
     val recipients = to.split(',', ';').map { it.trim() }.filter { it.isNotEmpty() }
     val rules by produceState(ConversionRules.OFF) { value = c.outgoing.rulesFor(c.settings.current().defaultSubId) }
     val route = c.outgoing.routeFor(recipients.size, attachments.isNotEmpty(), body, rules)
@@ -129,7 +148,6 @@ fun NewMessageScreen(initialTo: String, initialBody: String, onBack: () -> Unit,
     // The SIM a new message goes out on: the one picked here, otherwise the app's/system default.
     val sims = remember { c.sims.active() }
     var pickedSubId by remember { mutableStateOf<Int?>(null) }
-    var picking by remember { mutableStateOf(false) }
     val preferredSubId by remember { c.settings.settings.map { it.defaultSubId }.distinctUntilChanged() }.collectAsStateWithLifecycle(-1)
     val effectiveSubId = remember(sims, pickedSubId, preferredSubId) {
         if (sims.size < 2) preferredSubId
@@ -171,29 +189,26 @@ fun NewMessageScreen(initialTo: String, initialBody: String, onBack: () -> Unit,
                     }
                 }
             }
+            // Shown only while nothing is being typed, so it never competes with the contact suggestions.
+            if (typing.isBlank() && recents.isNotEmpty()) {
+                Column(Modifier.fillMaxWidth()) {
+                    Text("Recent", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp, bottom = 2.dp))
+                    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        items(recents) { m ->
+                            RecentContactChip(m) {
+                                val before = to.substringBeforeLast(',', "").let { if (it.isEmpty()) "" else "$it, " }
+                                to = "$before${m.number}, "
+                            }
+                        }
+                    }
+                }
+            }
             if (attachments.isNotEmpty()) AttachmentStrip(attachments, onRemove = { attachments.remove(it); c.attachmentStore.discard(it) })
             // The message takes whatever room is left; long texts scroll inside the field instead of shrinking it.
             OutlinedTextField(
                 value = body, onValueChange = { body = it }, placeholder = { Text("Message") },
                 modifier = Modifier.fillMaxWidth().weight(1f), minLines = 3,
             )
-            if (sims.size > 1 && currentSim != null) {
-                val sim = currentSim
-                OutlinedCard(onClick = { picking = true }) {
-                    Row(
-                        Modifier.padding(horizontal = 12.dp, vertical = 6.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    ) {
-                        Icon(Icons.Filled.SimCard, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.primary)
-                        Column {
-                            Text("Send from ${sim.title}", style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            Text(currentSim.detail, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                        }
-                    }
-                }
-                if (picking) SimPickerDialog("Send from", sims, sim.subId, allowSystemDefault = false, onPick = { pickedSubId = it }) { picking = false }
-            }
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                 val (parts, left) = smsCounter(body)
                 val routeLabel = when {
@@ -203,7 +218,18 @@ fun NewMessageScreen(initialTo: String, initialBody: String, onBack: () -> Unit,
                     else -> ""
                 }
                 Text(routeLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
-                AttachButton(picker, enabled = !sending)
+                // Equal weight with the route label, so a narrow screen shrinks the name instead of the row overflowing.
+                if (sims.size > 1 && currentSim != null) SimChip(currentSim, sims, { pickedSubId = it }, Modifier.weight(1f, fill = false))
+                // With one number in the To field, the draft can be handed to WhatsApp instead.
+                if (recipients.size == 1 && ConversationKeys.isPhoneNumber(recipients.first())) {
+                    IconButton(onClick = {
+                        val opened = context.openWhatsApp(recipients.first(), body)
+                        if (!opened) scope.launch { snackbar.showSnackbar("Couldn't open WhatsApp") }
+                    }) {
+                        Icon(ImageVector.vectorResource(R.drawable.ic_whatsapp), "Open in WhatsApp, with this text", tint = WhatsAppGreen)
+                    }
+                }
+                AttachButton(picker, enabled = !sending) { body = body + it }
                 if (rephraseEnabled) RephraseButton(rephrase, body)
                 val canSend = !sending && recipients.isNotEmpty() && (body.isNotBlank() || attachments.isNotEmpty())
                 Box(
@@ -216,7 +242,9 @@ fun NewMessageScreen(initialTo: String, initialBody: String, onBack: () -> Unit,
                             val address = recipients.joinToString(",")
                             // The type of the first message decides the thread: a picture or a converted long text starts
                             // the multimedia conversation, plain text the SMS one; later messages follow the thread they are sent from.
-                            val key = ConversationKeys.of(address, mms = route != SendRoute.SMS)
+                            // With "keep together" on there is only one thread per sender, so the type no longer splits it.
+                            val grouped = c.settings.current().groupSmsAndMms
+                            val key = ConversationKeys.of(address, mms = route != SendRoute.SMS && !grouped)
                             val subId = c.simSelector.forConversation(key, pickedSubId)
                             val holdSeconds = c.settings.current().sendDelaySeconds
                             if (holdSeconds > 0) {
@@ -253,6 +281,7 @@ fun SearchScreen(onBack: () -> Unit, onOpen: (key: String, address: String) -> U
     val query by vm.query.collectAsStateWithLifecycle()
     val results by vm.results.collectAsStateWithLifecycle()
     val smart by vm.smartSearch.collectAsStateWithLifecycle()
+    val useSemantic by vm.useSemantic.collectAsStateWithLifecycle()
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { focus.requestFocus() }
     SimpleScaffold("Search", onBack) { padding ->
@@ -262,10 +291,34 @@ fun SearchScreen(onBack: () -> Unit, onOpen: (key: String, address: String) -> U
                 placeholder = { Text("Search messages, senders, amounts") },
                 modifier = Modifier.fillMaxWidth().padding(12.dp).focusRequester(focus),
             )
+            // The AI half of the search is opt-in per search: until it is ticked, only the word matching runs.
+            if (smart.enabled && smart.problem == null) {
+                Row(
+                    Modifier.padding(start = 16.dp, end = 16.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    Checkbox(checked = useSemantic, onCheckedChange = { vm.useSemantic.value = it })
+                    // A small AI mark by the label, so it reads at a glance which half of the search the model does.
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Filled.AutoAwesome, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+                        Text("Search similar in meaning", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
             smartSearchNote(smart)?.let {
                 Text(
                     it, style = MaterialTheme.typography.bodySmall,
                     color = if (smart.problem != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                )
+            }
+            // What the AI does here, in one line: it is a small model inside the app, and nothing leaves the phone.
+            if (smart.enabled && useSemantic && query.isNotBlank()) {
+                Text(
+                    "AI search: “Similar in meaning” is found by a small model built into aismo, running entirely on this phone. Nothing is sent anywhere.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                 )
             }
@@ -344,6 +397,31 @@ private fun MessageRow(m: MessageEntity, query: String, onOpen: (String, String)
         },
     )
     HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.4f))
+}
+
+/** One entry of the "Recent" row under the To field: a first letter on a coloured circle, the name under it. */
+@Composable
+private fun RecentContactChip(contact: aismo.sms.data.sms.ContactDirectory.Match, onClick: () -> Unit) {
+    // The circle colour follows the number, so the same person always gets the same one.
+    val (bg, on) = when (kotlin.math.abs(contact.number.hashCode()) % 4) {
+        0 -> MaterialTheme.colorScheme.primaryContainer to MaterialTheme.colorScheme.onPrimaryContainer
+        1 -> MaterialTheme.colorScheme.secondaryContainer to MaterialTheme.colorScheme.onSecondaryContainer
+        2 -> MaterialTheme.colorScheme.tertiaryContainer to MaterialTheme.colorScheme.onTertiaryContainer
+        else -> MaterialTheme.colorScheme.errorContainer to MaterialTheme.colorScheme.onErrorContainer
+    }
+    Column(
+        Modifier.width(72.dp).clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        Box(
+            Modifier.size(44.dp).clip(CircleShape).background(bg),
+            contentAlignment = Alignment.Center,
+        ) {
+            Text(contact.name.first().uppercase(), style = MaterialTheme.typography.titleMedium, color = on, maxLines = 1)
+        }
+        Text(contact.name, style = MaterialTheme.typography.labelSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
 }
 
 /** Bolds each search word where it appears in the snippet. */

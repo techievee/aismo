@@ -21,6 +21,7 @@ import kotlinx.coroutines.withContext
 import aismo.sms.domain.llm.ChatMessage
 import aismo.sms.domain.llm.ChatRole
 import aismo.sms.domain.llm.GenerationException
+import aismo.sms.domain.llm.ModelOutput
 import aismo.sms.domain.llm.TextGenerator
 import java.io.File
 import java.util.concurrent.atomic.AtomicBoolean
@@ -59,7 +60,8 @@ class LiteRtLmGenerator(private val context: Context, private val modelFile: Fil
                         }
                         try {
                             val reply = conversation.sendMessage(request.text)
-                            reply.contents.contents.filterIsInstance<Content.Text>().joinToString("") { it.text }
+                            // The thinking flag is off above, but a stubborn model may reason anyway; the user gets the answer only.
+                            ModelOutput.withoutThinking(reply.contents.contents.filterIsInstance<Content.Text>().joinToString("") { it.text })
                         } finally {
                             finished.set(true)
                             watcher.cancel()

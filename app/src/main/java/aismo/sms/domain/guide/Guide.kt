@@ -107,6 +107,7 @@ object Guide {
             "search", "Search",
             paragraphs = listOf(
                 "Tap the magnifier in the inbox. Messages with your words come first. With Search by meaning switched on (Settings → Search) a \"Similar in meaning\" list follows, so \"power bill\" can find the electricity notice.",
+                "That AI search is done by a small model built into aismo, running entirely on this phone. Your words and messages never leave it; the app has no internet permission at all.",
                 "The first time, your messages are read in the background, newest first. Settings shows how far it has got.",
             ),
         ),
