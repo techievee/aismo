@@ -4,17 +4,23 @@ The public "What's new" text for each Play release, plus the internal release na
 console. The notes must stay under 500 characters per language. A new section is added at the
 top for every release.
 
+## 0.7.2
+
+**Release name (console):** 0.7.2
+
+**Play release notes:**
+
+The first-run screen now reads clearly: a light, high-contrast layout with solid buttons for
+granting message access and setting aismo as the default SMS app, so a new install gets through
+without confusion. Everything stays on your phone - no account, no ads, no internet permission.
+
 ## 0.7.1
 
 **Release name (console):** 0.7.1
 
 **Play release notes:**
 
-Translations and on-device rewrites now give only the answer: the model's thinking steps and stray
-tags no longer reach the screen. The SIM button shows just the number, and the message box gets its
-own row so long drafts no longer crowd the buttons. Fixes to backup and restore, and small layout
-polish across the app. Everything still stays on your phone - no account, no ads, no internet
-permission.
+when
 
 ## 0.7.0
 

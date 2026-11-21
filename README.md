@@ -173,7 +173,7 @@ app/                    the Android application (package aismo.sms)
 tools/fake-mmsc/        fake MMS centre for the live MMS tests
 tools/embedding-reference/  Python scripts that made the reference data for the search tests
 tools/icon/             render_icon.py draws the app icon (a lit, embossed bubble) from a height map; `python3 tools/icon/render_icon.py` rewrites the icon files
-docs/images/            the icon for this README
+docs/images/            the icon for this README, plus the feature screenshots (listed in features/README.md)
 tools/rephrase-eval/    the writing assistant's test drafts and a script that scores its prompts on any GGUF model (same prompts.json as the app)
 THIRD_PARTY_NOTICES.md  licences of the bundled model, runtimes and engines (texts in app/src/main/assets/licenses)
 release/                prebuilt APK and its checksum

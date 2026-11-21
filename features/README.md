@@ -6,6 +6,7 @@ electricity bill (Bills), a bank debit (Finance), and a Hindi personal message.
 
 | File | Feature shown |
 | --- | --- |
+| `00-onboarding.png` | The first screen after install: the two permissions (message access and default SMS app) each with their own button, on a light, high-contrast layout. |
 | `01-inbox.png` | The inbox: conversations sorted into categories, unread badges, the category bar along the bottom. |
 | `02-thread-translation.png` | A conversation: a Hindi message with on-device translations to English and French shown under the original. |
 | `03-search-meaning.png` | Search by meaning: "power bill" finds the electricity notice under "Similar in meaning", with no shared words. |
