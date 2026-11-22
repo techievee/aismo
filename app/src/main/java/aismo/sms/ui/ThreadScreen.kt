@@ -126,11 +126,12 @@ fun ThreadScreen(key: String, addressHint: String?, onBack: () -> Unit, onOpenSe
     val targetLang by vm.translateTargetLang.collectAsStateWithLifecycle()
     val rephrase = rememberRephraseController()
     // The recent messages of the thread, oldest first, so the writing assistant can craft a reply that fits the
-    // conversation. The list is newest first, so it is read back into order; each line is capped so a chatty thread
-    // cannot push a small model's context window over the edge.
-    val rephraseContext = remember(messages) {
-        if (messages.isEmpty()) null
-        else messages.take(10).reversed().mapNotNull { m ->
+    // conversation. The count comes from Settings (0 to 10); the list is newest first, so it is read back into
+    // order; each line is capped so a chatty thread cannot push a small model's context window over the edge.
+    val rephraseContextMessages by vm.rephraseContextMessages.collectAsStateWithLifecycle()
+    val rephraseContext = remember(messages, rephraseContextMessages) {
+        if (messages.isEmpty() || rephraseContextMessages == 0) null
+        else messages.take(rephraseContextMessages).reversed().mapNotNull { m ->
             val body = m.body.replace('\n', ' ').trim()
             if (body.isEmpty()) null
             else (if (m.type == Telephony.Sms.MESSAGE_TYPE_INBOX) "Them" else "You") + ": " + body.take(120)

@@ -156,6 +156,10 @@ class ThreadViewModel(private val c: AppContainer, val key: String) : ViewModel(
     val rephraseEnabled: StateFlow<Boolean> = c.settings.settings.map { it.rephraseEnabled }.distinctUntilChanged()
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT), true)
 
+    /** How many of the thread's most recent messages the rewrite is shown as context; 0 passes only the draft. */
+    val rephraseContextMessages: StateFlow<Int> = c.settings.settings.map { it.rephraseContextMessages }.distinctUntilChanged()
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(STOP_TIMEOUT), 10)
+
     /** The language messages are translated into: what the user picked, or the phone's own when the app knows it. */
     val translateTargetLang: StateFlow<Language> = c.settings.settings
         .map { Language.fromKey(it.translateTargetLang) ?: defaultTarget(Locale.getDefault().language) }

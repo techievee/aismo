@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AutoFixHigh
+import androidx.compose.material.icons.filled.Chat
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FolderOpen
@@ -129,6 +130,7 @@ fun WritingAssistantSection(s: AppSettings) {
     val wanted = wantedPicked ?: recommended
     val installed = remember(backend, version) { c.modelStore.installed(backend) }
     var engineDialog by remember { mutableStateOf(false) }
+    var contextDialog by remember { mutableStateOf(false) }
     var modelDialog by remember { mutableStateOf(false) }
     var removeDialog by remember { mutableStateOf(false) }
     val picker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if (uri != null) vm.import(uri, context.contentResolver) }
@@ -140,6 +142,11 @@ fun WritingAssistantSection(s: AppSettings) {
             "A button in the message box rewrites your draft on this phone: fix everything, more polite, friendlier or shorter. You see the result before anything changes.",
             s.rephraseEnabled,
         ) { v -> scope.launch { c.settings.update { it.copy(rephraseEnabled = v) } } }
+        NavRow(
+            Icons.Filled.Chat, accent, "Conversation history",
+            if (s.rephraseContextMessages == 0) "The assistant sees only your draft when it rewrites a reply."
+            else "The assistant sees the ${s.rephraseContextMessages} most recent message${if (s.rephraseContextMessages == 1) "" else "s"} of the conversation, so the rewrite fits what came before. It never sees more than 10.",
+        ) { contextDialog = true }
         val best = ModelCatalog.bestEngine(ramBytes)
         NavRow(Icons.Filled.Memory, accent, "Engine",
             "${backend.label}. ${backend.summary}" + if (best != backend) " For this phone's memory, ${best.label} is the better fit." else " It is the better fit for this phone's memory.") { engineDialog = true }
@@ -172,6 +179,21 @@ fun WritingAssistantSection(s: AppSettings) {
             { i -> scope.launch { c.settings.update { it.copy(rephraseBackend = LlmBackend.entries[i]) } } },
             recommended = LlmBackend.entries.indexOf(best),
         ) { engineDialog = false }
+    }
+    if (contextDialog) {
+        val options = (0..10).toList()
+        ChoiceDialog(
+            "Conversation history",
+            options.map {
+                when (it) {
+                    0 -> "None — just your draft"
+                    1 -> "1 most recent message"
+                    else -> "$it most recent messages"
+                }
+            },
+            options.indexOf(s.rephraseContextMessages).coerceAtLeast(0),
+            { i -> scope.launch { c.settings.update { it.copy(rephraseContextMessages = options[i]) } } },
+        ) { contextDialog = false }
     }
     if (modelDialog) {
         var justPicked by remember { mutableStateOf(false) }

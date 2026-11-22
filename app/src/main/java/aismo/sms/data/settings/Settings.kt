@@ -105,6 +105,11 @@ data class AppSettings(
     /** The on-device writing assistant: rewrite a draft with a small language model. Needs a model file chosen in Settings. */
     val rephraseEnabled: Boolean = true,
     val rephraseBackend: LlmBackend = LlmBackend.LLAMA_CPP,
+    /**
+     * How many of the thread's most recent messages the writing assistant sees when rewriting a reply, so the
+     * rewrite fits the conversation; 0 passes only the draft. Capped at 10 to keep a small model's context window safe.
+     */
+    val rephraseContextMessages: Int = 10,
     /** Auto-translate incoming messages that are not in [translateTargetLang], using the writing assistant's model. */
     val translateEnabled: Boolean = true,
     /** The language to translate into; blank means the phone's own language when the app knows it. */
@@ -153,6 +158,7 @@ class SettingsRepository(private val context: Context) {
         val sendDelaySeconds = intPreferencesKey("send_delay_seconds")
         val rephraseEnabled = booleanPreferencesKey("rephrase_enabled")
         val rephraseBackend = stringPreferencesKey("rephrase_backend")
+        val rephraseContextMessages = intPreferencesKey("rephrase_context_messages")
         val translateEnabled = booleanPreferencesKey("translate_enabled")
         val translateTargetLang = stringPreferencesKey("translate_target_lang")
         val importCompleted = booleanPreferencesKey("import_completed")
@@ -203,6 +209,7 @@ class SettingsRepository(private val context: Context) {
             sendDelaySeconds = SendDelay.normalise(p[K.sendDelaySeconds] ?: d.sendDelaySeconds),
             rephraseEnabled = p[K.rephraseEnabled] ?: d.rephraseEnabled,
             rephraseBackend = LlmBackend.fromKey(p[K.rephraseBackend]) ?: d.rephraseBackend,
+            rephraseContextMessages = (p[K.rephraseContextMessages] ?: d.rephraseContextMessages).coerceIn(0, 10),
             translateEnabled = p[K.translateEnabled] ?: d.translateEnabled,
             translateTargetLang = p[K.translateTargetLang] ?: d.translateTargetLang,
         )
@@ -252,6 +259,7 @@ class SettingsRepository(private val context: Context) {
             p[K.sendDelaySeconds] = SendDelay.normalise(next.sendDelaySeconds)
             p[K.rephraseEnabled] = next.rephraseEnabled
             p[K.rephraseBackend] = next.rephraseBackend.key
+            p[K.rephraseContextMessages] = next.rephraseContextMessages.coerceIn(0, 10)
             p[K.translateEnabled] = next.translateEnabled
             p[K.translateTargetLang] = next.translateTargetLang
         }

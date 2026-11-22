@@ -18,8 +18,8 @@ android {
         applicationId = "aismo.sms"
         minSdk = 29
         targetSdk = 37
-        versionCode = 11
-        versionName = "0.7.2"
+        versionCode = 12
+        versionName = "0.7.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
         // ONNX Runtime ships about 15 MB of native code per architecture. Override with -Pabis=arm64-v8a for a phone-only build.
