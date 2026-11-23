@@ -52,6 +52,7 @@ import aismo.sms.ui.LicenceTextScreen
 import aismo.sms.ui.LicencesScreen
 import aismo.sms.ui.PrivacyScreen
 import aismo.sms.ui.LocalCustomCategoryIcons
+import aismo.sms.ui.SettingsGroupScreen
 import aismo.sms.ui.SettingsScreen
 import aismo.sms.ui.StarredScreen
 import aismo.sms.ui.ThreadScreen
@@ -70,6 +71,7 @@ object Routes {
     const val PROTECTION = "protection"
     const val BLOCKED = "blocked"
     const val SETTINGS = "settings"
+    const val SETTINGS_GROUP = "settings/group/{group}"
     const val CATEGORIES = "settings/categories"
     const val CATEGORY_ORDER = "settings/category-order"
     const val RULES = "settings/rules"
@@ -85,6 +87,7 @@ object Routes {
     fun licenceText(asset: String, title: String) = "licences/${Uri.encode(asset)}?title=${Uri.encode(title)}"
     fun thread(key: String, address: String = "") = "thread/${Uri.encode(key)}?address=${Uri.encode(address)}"
     fun new(to: String = "", body: String = "") = "new?to=${Uri.encode(to)}&body=${Uri.encode(body)}"
+    fun settingsGroup(group: String) = "settings/group/${Uri.encode(group)}"
 }
 
 /**
@@ -266,6 +269,16 @@ private fun AppNav(pending: MutableState<Intent?>) {
         composable(Routes.BLOCKED) { BlockedScreen(onBack = { nav.popBackStack() }) }
         composable(Routes.SETTINGS) {
             SettingsScreen(
+                onBack = { nav.popBackStack() },
+                onOpenGroup = { nav.navigate(Routes.settingsGroup(it)) },
+            )
+        }
+        composable(
+            Routes.SETTINGS_GROUP,
+            arguments = listOf(navArgument("group") { type = NavType.StringType }),
+        ) { entry ->
+            SettingsGroupScreen(
+                group = entry.arguments?.getString("group").orEmpty(),
                 onBack = { nav.popBackStack() },
                 onCategories = { nav.navigate(Routes.CATEGORIES) },
                 onCategoryOrder = { nav.navigate(Routes.CATEGORY_ORDER) },

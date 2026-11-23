@@ -63,6 +63,15 @@ fun IconChip(icon: ImageVector, accent: Color, enabled: Boolean = true) {
     }
 }
 
+/** The rounded card that a set of rows sits on; the same surface in a settings group and on the category page. */
+@Composable
+fun SettingsCard(content: @Composable ColumnScope.() -> Unit) {
+    Card(
+        Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+    ) { Column(Modifier.padding(vertical = 4.dp), content = content) }
+}
+
 /** A titled group of settings: a heading with the group's icon, then the rows together on one rounded card. */
 @Composable
 fun SettingsGroup(title: String, icon: ImageVector, accent: Color, content: @Composable ColumnScope.() -> Unit) {
@@ -71,10 +80,7 @@ fun SettingsGroup(title: String, icon: ImageVector, accent: Color, content: @Com
             Icon(icon, contentDescription = null, tint = readable(accent), modifier = Modifier.size(18.dp))
             Text(title, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.SemiBold, color = readable(accent))
         }
-        Card(
-            Modifier.fillMaxWidth(), shape = RoundedCornerShape(24.dp),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-        ) { Column(Modifier.padding(vertical = 4.dp), content = content) }
+        SettingsCard(content)
     }
 }
 

@@ -20,6 +20,7 @@ import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.AutoDelete
+import androidx.compose.material.icons.filled.AutoFixHigh
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.CleaningServices
@@ -31,6 +32,7 @@ import androidx.compose.material.icons.filled.FilterAlt
 import androidx.compose.material.icons.filled.GppMaybe
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Key
+import androidx.compose.material.icons.filled.Language
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Label
 import androidx.compose.material.icons.filled.NotificationsActive
@@ -73,6 +75,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.semantics.Role
 import aismo.sms.domain.CategoryIconKeys
 import androidx.compose.material.icons.automirrored.filled.Send
@@ -122,8 +125,49 @@ import aismo.sms.data.settings.ThemeMode
 import aismo.sms.domain.SmsCategory
 import aismo.sms.work.Workers
 
+/** One category of settings: its key, the name and icon it wears, and a line about what is inside. */
+private data class SettingsGroupInfo(
+    val key: String,
+    val title: String,
+    val icon: ImageVector,
+    val accent: Color,
+    val summary: String,
+)
+
+/** The categories of the settings page, in order. The first page lists them; each one opens its own page of settings. */
+private val settingsGroups = listOf(
+    SettingsGroupInfo("general", "General", Icons.Filled.Settings, SettingsAccent.General, "The default app and SIM, the look of the app, and spam in the inbox"),
+    SettingsGroupInfo("sending", "Sending", Icons.AutoMirrored.Filled.Send, SettingsAccent.Sending, "Hold a message after Send so you can undo it"),
+    SettingsGroupInfo("notifications", "Notifications", Icons.Filled.NotificationsActive, SettingsAccent.Notifications, "Which messages raise an alert, and for whom"),
+    SettingsGroupInfo("media", "Multimedia messages (MMS)", Icons.Filled.PermMedia, SettingsAccent.Media, "Threads, downloads, and long texts"),
+    SettingsGroupInfo("search", "Search", Icons.Filled.Search, SettingsAccent.Search, "Find messages by what they mean, on this phone"),
+    SettingsGroupInfo("writing", "Writing assistant", Icons.Filled.AutoFixHigh, SettingsAccent.Writing, "Rewrite a reply with the model on this phone"),
+    SettingsGroupInfo("translation", "Translation", Icons.Filled.Language, SettingsAccent.Translation, "Translate incoming messages on this phone"),
+    SettingsGroupInfo("codes", "One-time codes", Icons.Filled.Password, SettingsAccent.Codes, "Show codes with a copy button, and remove them when they are old"),
+    SettingsGroupInfo("organizer", "Organizer", Icons.Filled.Category, SettingsAccent.Organizer, "Inbox categories, custom categories, and rules"),
+    SettingsGroupInfo("security", "Security", Icons.Filled.Lock, SettingsAccent.Security, "Lock categories behind a fingerprint or a PIN"),
+    SettingsGroupInfo("data", "Data", Icons.Filled.Storage, SettingsAccent.Data, "Backups, and why nothing ever leaves this phone"),
+    SettingsGroupInfo("help", "Help and about", Icons.Filled.Info, SettingsAccent.About, "Help, what is inside, privacy, and licences"),
+)
+
+/** The first settings page: one row per category, each opening the page of that category's settings. */
 @Composable
-fun SettingsScreen(
+fun SettingsScreen(onBack: () -> Unit, onOpenGroup: (String) -> Unit) {
+    SimpleScaffold("Settings", onBack) { padding ->
+        Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(top = 8.dp, bottom = 24.dp)) {
+            SettingsCard {
+                settingsGroups.forEach { g ->
+                    NavRow(g.icon, g.accent, g.title, g.summary, chevron = true) { onOpenGroup(g.key) }
+                }
+            }
+        }
+    }
+}
+
+/** The second settings page: the settings of one category, reached from the list above. */
+@Composable
+fun SettingsGroupScreen(
+    group: String,
     onBack: () -> Unit, onCategories: () -> Unit, onCategoryOrder: () -> Unit, onRules: () -> Unit, onBackup: () -> Unit, onAppearance: () -> Unit,
     onHelp: () -> Unit, onAbout: () -> Unit, onPrivacy: () -> Unit,
 ) {
@@ -142,105 +186,124 @@ fun SettingsScreen(
     var numberDialog by remember { mutableStateOf(false) }
     var segmentsDialog by remember { mutableStateOf(false) }
 
-    SimpleScaffold("Settings", onBack) { padding ->
+    val info = remember(group) { settingsGroups.firstOrNull { it.key == group } ?: settingsGroups.first() }
+    SimpleScaffold(info.title, onBack) { padding ->
         Column(Modifier.padding(padding).fillMaxSize().verticalScroll(rememberScrollState()).padding(bottom = 24.dp)) {
-            val general = SettingsAccent.General
-            SettingsGroup("General", Icons.Filled.Settings, general) {
-                NavRow(Icons.Filled.Sms, general, "Default SMS app", if (context.isDefaultSmsApp()) "This app is your default" else "Another app is the default. Set this one from the inbox banner.") {}
-                NavRow(Icons.Filled.Palette, general, "Appearance", appearanceSummary(s), chevron = true, onClick = onAppearance)
-                SwitchRow(Icons.Filled.Report, general, "Show spam in All", "Spam conversations appear in the main inbox", s.includeSpamInAll) { v -> update { it.copy(includeSpamInAll = v) } }
-                if (sims.size > 1) {
-                    NavRow(Icons.Filled.SimCard, general, "Default SIM", sims.firstOrNull { it.subId == s.defaultSubId }?.label ?: "Use system default") { simDialog = true }
-                }
-            }
-
-            val sending = SettingsAccent.Sending
-            SettingsGroup("Sending", Icons.AutoMirrored.Filled.Send, sending) {
-                NavRow(Icons.AutoMirrored.Filled.Undo, sending, "Undo send", sendHoldSummary(s.sendDelaySeconds)) { holdDialog = true }
-            }
-
-            val alerts = SettingsAccent.Notifications
-            SettingsGroup("Notifications", Icons.Filled.NotificationsActive, alerts) {
-                SwitchRow(Icons.Filled.Key, alerts, "One-time code alerts", "Show codes with a copy button", s.otpNotifications) { v -> update { it.copy(otpNotifications = v) } }
-                SwitchRow(Icons.Filled.Receipt, alerts, "Transaction previews", "Summarise bank alerts in the notification", s.transactionPreviews) { v -> update { it.copy(transactionPreviews = v) } }
-                SwitchRow(Icons.Filled.GppMaybe, alerts, "Spam and scam alerts", "Warn when a risky message arrives", s.protectionAlerts) { v -> update { it.copy(protectionAlerts = v) } }
-                SwitchRow(Icons.Filled.Alarm, alerts, "Reminder alerts", "Bills, trips and deliveries due soon", s.reminderNotifications) { v -> update { it.copy(reminderNotifications = v) } }
-                SwitchRow(Icons.Filled.Savings, alerts, "Budget alerts", "When spending nears a budget", s.budgetAlerts) { v -> update { it.copy(budgetAlerts = v) } }
-                SwitchRow(Icons.Filled.DoneAll, alerts, "Delivery confirmations", "Tell me when a message is delivered", s.deliveryNotifications) { v -> update { it.copy(deliveryNotifications = v) } }
-                SwitchRow(Icons.Filled.VolumeUp, alerts, "Send sound", "Play a short tone after sending", s.sendSound) { v -> update { it.copy(sendSound = v) } }
-                SwitchRow(Icons.Filled.CleaningServices, alerts, "Weekly spam review", "A reminder every Sunday morning to look through spam and delete it", s.spamReviewReminder) { v -> update { it.copy(spamReviewReminder = v) } }
-                SwitchRow(Icons.Filled.Person, alerts, "Alert only for contacts", "No notifications from senders that are not in your contacts. Their messages still arrive and are sorted.", s.notifyContactsOnly) { v -> update { it.copy(notifyContactsOnly = v) } }
-            }
-
-            val media = SettingsAccent.Media
-            SettingsGroup("Multimedia messages (MMS)", Icons.Filled.PermMedia, media) {
-                SwitchRow(Icons.Filled.Merge, media, "Keep texts and pictures together", "On, SMS and MMS from the same sender share one thread; off, they stay in separate threads. Inbox categories follow the choice.", s.groupSmsAndMms) { v ->
-                    scope.launch {
-                        c.settings.update { it.copy(groupSmsAndMms = v) }
-                        launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { c.repository.maintainGrouping() } }
+            if (group == "general") {
+                val general = SettingsAccent.General
+                SettingsGroup("General", Icons.Filled.Settings, general) {
+                    NavRow(Icons.Filled.Sms, general, "Default SMS app", if (context.isDefaultSmsApp()) "This app is your default" else "Another app is the default. Set this one from the inbox banner.") {}
+                    NavRow(Icons.Filled.Palette, general, "Appearance", appearanceSummary(s), chevron = true, onClick = onAppearance)
+                    SwitchRow(Icons.Filled.Report, general, "Show spam in All", "Spam conversations appear in the main inbox", s.includeSpamInAll) { v -> update { it.copy(includeSpamInAll = v) } }
+                    if (sims.size > 1) {
+                        NavRow(Icons.Filled.SimCard, general, "Default SIM", sims.firstOrNull { it.subId == s.defaultSubId }?.label ?: "Use system default") { simDialog = true }
                     }
                 }
-                SwitchRow(Icons.Filled.CloudDownload, media, "Download automatically", "Fetch pictures and videos as soon as they arrive", s.autoDownloadMms) { v -> update { it.copy(autoDownloadMms = v) } }
-                SwitchRow(Icons.Filled.Public, media, "Download while roaming", "May cost extra when you are away from your network", s.downloadMmsWhileRoaming, enabled = s.autoDownloadMms) { v -> update { it.copy(downloadMmsWhileRoaming = v) } }
-                SwitchRow(Icons.Filled.Description, media, "Send long texts as MMS", "One multimedia message instead of a chain of text parts", s.longTextToMms) { v -> update { it.copy(longTextToMms = v) } }
-                NavRow(Icons.Filled.Tune, media, "Convert after", if (s.longTextSegments == 0) "Carrier default" else "More than ${s.longTextSegments} text parts", enabled = s.longTextToMms) { segmentsDialog = true }
-                NavRow(Icons.Filled.Smartphone, media, "My phone number", s.ownNumber.ifBlank { "Detected automatically" }) { numberDialog = true }
             }
 
-            val search = SettingsAccent.Search
-            SettingsGroup("Search", Icons.Filled.Search, search) {
-                val smart by remember { c.smartSearchStatus() }.collectAsStateWithLifecycle(SmartSearchStatus())
-                SwitchRow(Icons.Filled.Psychology, search, "Search by meaning", smartSearchSummary(smart), s.smartSearch) { on ->
-                    scope.launch {
-                        c.settings.update { it.copy(smartSearch = on) }
-                        if (on) {
-                            Workers.scheduleEmbedding(context, immediately = true)
-                        } else {
-                            Workers.cancelEmbedding(context)
-                            c.semanticIndex.clear()
-                            c.embedder.close()
+            if (group == "sending") {
+                val sending = SettingsAccent.Sending
+                SettingsGroup("Sending", Icons.AutoMirrored.Filled.Send, sending) {
+                    NavRow(Icons.AutoMirrored.Filled.Undo, sending, "Undo send", sendHoldSummary(s.sendDelaySeconds)) { holdDialog = true }
+                }
+            }
+
+            if (group == "notifications") {
+                val alerts = SettingsAccent.Notifications
+                SettingsGroup("Notifications", Icons.Filled.NotificationsActive, alerts) {
+                    SwitchRow(Icons.Filled.Key, alerts, "One-time code alerts", "Show codes with a copy button", s.otpNotifications) { v -> update { it.copy(otpNotifications = v) } }
+                    SwitchRow(Icons.Filled.Receipt, alerts, "Transaction previews", "Summarise bank alerts in the notification", s.transactionPreviews) { v -> update { it.copy(transactionPreviews = v) } }
+                    SwitchRow(Icons.Filled.GppMaybe, alerts, "Spam and scam alerts", "Warn when a risky message arrives", s.protectionAlerts) { v -> update { it.copy(protectionAlerts = v) } }
+                    SwitchRow(Icons.Filled.Alarm, alerts, "Reminder alerts", "Bills, trips and deliveries due soon", s.reminderNotifications) { v -> update { it.copy(reminderNotifications = v) } }
+                    SwitchRow(Icons.Filled.Savings, alerts, "Budget alerts", "When spending nears a budget", s.budgetAlerts) { v -> update { it.copy(budgetAlerts = v) } }
+                    SwitchRow(Icons.Filled.DoneAll, alerts, "Delivery confirmations", "Tell me when a message is delivered", s.deliveryNotifications) { v -> update { it.copy(deliveryNotifications = v) } }
+                    SwitchRow(Icons.Filled.VolumeUp, alerts, "Send sound", "Play a short tone after sending", s.sendSound) { v -> update { it.copy(sendSound = v) } }
+                    SwitchRow(Icons.Filled.CleaningServices, alerts, "Weekly spam review", "A reminder every Sunday morning to look through spam and delete it", s.spamReviewReminder) { v -> update { it.copy(spamReviewReminder = v) } }
+                    SwitchRow(Icons.Filled.Person, alerts, "Alert only for contacts", "No notifications from senders that are not in your contacts. Their messages still arrive and are sorted.", s.notifyContactsOnly) { v -> update { it.copy(notifyContactsOnly = v) } }
+                }
+            }
+
+            if (group == "media") {
+                val media = SettingsAccent.Media
+                SettingsGroup("Multimedia messages (MMS)", Icons.Filled.PermMedia, media) {
+                    SwitchRow(Icons.Filled.Merge, media, "Keep texts and pictures together", "On, SMS and MMS from the same sender share one thread; off, they stay in separate threads. Inbox categories follow the choice.", s.groupSmsAndMms) { v ->
+                        scope.launch {
+                            c.settings.update { it.copy(groupSmsAndMms = v) }
+                            launch(kotlinx.coroutines.Dispatchers.IO) { runCatching { c.repository.maintainGrouping() } }
+                        }
+                    }
+                    SwitchRow(Icons.Filled.CloudDownload, media, "Download automatically", "Fetch pictures and videos as soon as they arrive", s.autoDownloadMms) { v -> update { it.copy(autoDownloadMms = v) } }
+                    SwitchRow(Icons.Filled.Public, media, "Download while roaming", "May cost extra when you are away from your network", s.downloadMmsWhileRoaming, enabled = s.autoDownloadMms) { v -> update { it.copy(downloadMmsWhileRoaming = v) } }
+                    SwitchRow(Icons.Filled.Description, media, "Send long texts as MMS", "One multimedia message instead of a chain of text parts", s.longTextToMms) { v -> update { it.copy(longTextToMms = v) } }
+                    NavRow(Icons.Filled.Tune, media, "Convert after", if (s.longTextSegments == 0) "Carrier default" else "More than ${s.longTextSegments} text parts", enabled = s.longTextToMms) { segmentsDialog = true }
+                    NavRow(Icons.Filled.Smartphone, media, "My phone number", s.ownNumber.ifBlank { "Detected automatically" }) { numberDialog = true }
+                }
+            }
+
+            if (group == "search") {
+                val search = SettingsAccent.Search
+                SettingsGroup("Search", Icons.Filled.Search, search) {
+                    val smart by remember { c.smartSearchStatus() }.collectAsStateWithLifecycle(SmartSearchStatus())
+                    SwitchRow(Icons.Filled.Psychology, search, "Search by meaning", smartSearchSummary(smart), s.smartSearch) { on ->
+                        scope.launch {
+                            c.settings.update { it.copy(smartSearch = on) }
+                            if (on) {
+                                Workers.scheduleEmbedding(context, immediately = true)
+                            } else {
+                                Workers.cancelEmbedding(context)
+                                c.semanticIndex.clear()
+                                c.embedder.close()
+                            }
                         }
                     }
                 }
             }
 
-            WritingAssistantSection(s)
+            if (group == "writing") WritingAssistantSection(s)
 
-            TranslationSection(s)
+            if (group == "translation") TranslationSection(s)
 
-            val codes = SettingsAccent.Codes
-            SettingsGroup("One-time codes", Icons.Filled.Password, codes) {
-                SwitchRow(Icons.Filled.AutoDelete, codes, "Auto-delete codes", "Remove code messages after they are used or old", s.otpAutoDelete) { v -> update { it.copy(otpAutoDelete = v) } }
-                NavRow(Icons.Filled.Timer, codes, "Delete after", "${s.otpAutoDeleteHours} hours", enabled = s.otpAutoDelete) { hoursDialog = true }
-                SwitchRow(Icons.Filled.ContentCopy, codes, "Delete after copying", "Remove the message as soon as you copy its code", s.otpDeleteAfterCopy) { v -> update { it.copy(otpDeleteAfterCopy = v) } }
-            }
-
-            val organizer = SettingsAccent.Organizer
-            SettingsGroup("Organizer", Icons.Filled.Category, organizer) {
-                NavRow(Icons.Filled.ViewList, organizer, "Inbox categories", "Choose which categories show in the inbox, their order, and which may notify you", chevron = true, onClick = onCategoryOrder)
-                NavRow(Icons.Filled.Label, organizer, "Custom categories", "Create your own inbox categories", chevron = true, onClick = onCategories)
-                NavRow(Icons.Filled.FilterAlt, organizer, "Rules", "Always file a sender or phrase under a category", chevron = true, onClick = onRules)
-                Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
-                    OutlinedButton(onClick = { org.reapply() }, enabled = !reapplying) {
-                        Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
-                        Text("  Re-organize all messages")
-                    }
-                    if (reapplying) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp))
+            if (group == "codes") {
+                val codes = SettingsAccent.Codes
+                SettingsGroup("One-time codes", Icons.Filled.Password, codes) {
+                    SwitchRow(Icons.Filled.AutoDelete, codes, "Auto-delete codes", "Remove code messages after they are used or old", s.otpAutoDelete) { v -> update { it.copy(otpAutoDelete = v) } }
+                    NavRow(Icons.Filled.Timer, codes, "Delete after", "${s.otpAutoDeleteHours} hours", enabled = s.otpAutoDelete) { hoursDialog = true }
+                    SwitchRow(Icons.Filled.ContentCopy, codes, "Delete after copying", "Remove the message as soon as you copy its code", s.otpDeleteAfterCopy) { v -> update { it.copy(otpDeleteAfterCopy = v) } }
                 }
             }
 
-            SecuritySection(s)
-
-            val data = SettingsAccent.Data
-            SettingsGroup("Data", Icons.Filled.Storage, data) {
-                NavRow(Icons.Filled.PrivacyTip, data, "Private by design", "Everything is processed on this phone. aismo has no internet permission, so nothing is ever sent anywhere.", chevron = true, onClick = onPrivacy)
-                NavRow(Icons.Filled.Backup, data, "Backup and restore", "Encrypted copy of your messages and settings", chevron = true, onClick = onBackup)
+            if (group == "organizer") {
+                val organizer = SettingsAccent.Organizer
+                SettingsGroup("Organizer", Icons.Filled.Category, organizer) {
+                    NavRow(Icons.Filled.ViewList, organizer, "Inbox categories", "Choose which categories show in the inbox, their order, and which may notify you", chevron = true, onClick = onCategoryOrder)
+                    NavRow(Icons.Filled.Label, organizer, "Custom categories", "Create your own inbox categories", chevron = true, onClick = onCategories)
+                    NavRow(Icons.Filled.FilterAlt, organizer, "Rules", "Always file a sender or phrase under a category", chevron = true, onClick = onRules)
+                    Column(Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+                        OutlinedButton(onClick = { org.reapply() }, enabled = !reapplying) {
+                            Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
+                            Text("  Re-organize all messages")
+                        }
+                        if (reapplying) LinearProgressIndicator(Modifier.fillMaxWidth().padding(top = 8.dp))
+                    }
+                }
             }
 
-            val about = SettingsAccent.About
-            SettingsGroup("Help and about", Icons.Filled.Info, about) {
-                NavRow(Icons.AutoMirrored.Filled.HelpOutline, about, "Help and FAQ", "How to do things, and what to try when something does not work", chevron = true, onClick = onHelp)
-                NavRow(Icons.Filled.Info, about, "About aismo", "Version ${versionLabel(context)}, read me, privacy and licences", chevron = true, onClick = onAbout)
+            if (group == "security") SecuritySection(s)
+
+            if (group == "data") {
+                val data = SettingsAccent.Data
+                SettingsGroup("Data", Icons.Filled.Storage, data) {
+                    NavRow(Icons.Filled.PrivacyTip, data, "Private by design", "Everything is processed on this phone. aismo has no internet permission, so nothing is ever sent anywhere.", chevron = true, onClick = onPrivacy)
+                    NavRow(Icons.Filled.Backup, data, "Backup and restore", "Encrypted copy of your messages and settings", chevron = true, onClick = onBackup)
+                }
+            }
+
+            if (group == "help") {
+                val about = SettingsAccent.About
+                SettingsGroup("Help and about", Icons.Filled.Info, about) {
+                    NavRow(Icons.AutoMirrored.Filled.HelpOutline, about, "Help and FAQ", "How to do things, and what to try when something does not work", chevron = true, onClick = onHelp)
+                    NavRow(Icons.Filled.Info, about, "About aismo", "Version ${versionLabel(context)}, read me, privacy and licences", chevron = true, onClick = onAbout)
+                }
             }
         }
     }

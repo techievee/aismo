@@ -4,6 +4,17 @@ The public "What's new" text for each Play release, plus the internal release na
 console. The notes must stay under 500 characters per language. A new section is added at the
 top for every release.
 
+## 0.7.4
+
+**Release name (console):** 0.7.4
+
+**Play release notes:**
+
+Settings is easier to find now: the first page lists every category - General, Sending,
+Notifications, Multimedia, Search, Writing assistant, Translation, One-time codes, Organizer,
+Security, Data and Help - and tapping one opens its settings, so what you are looking for is
+two taps away. Everything stays on your phone - no account, no ads, no internet permission.
+
 ## 0.7.3
 
 **Release name (console):** 0.7.3
