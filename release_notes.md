@@ -10,7 +10,15 @@ top for every release.
 
 **Play release notes:**
 
+<en-GB>
 When the writing assistant rewrites a reply, it now looks at just the one most recent message by default instead of the last ten. Your rewrite still fits the conversation, but the model on this phone reads less. You can still choose how much history it sees in Settings, from none up to ten. Everything stays on your phone - no account, no ads, no internet permission.
+</en-GB>
+<en-AU>
+When the writing assistant rewrites a reply, it now looks at just the one most recent message by default instead of the last ten. Your rewrite still fits the conversation, but the model on this phone reads less. You can still choose how much history it sees in Settings, from none up to ten. Everything stays on your phone - no account, no ads, no internet permission.
+</en-AU>
+<en-IN>
+When the writing assistant rewrites a reply, it now looks at just the one most recent message by default instead of the last ten. Your rewrite still fits the conversation, but the model on this phone reads less. You can still choose how much history it sees in Settings, from none up to ten. Everything stays on your phone - no account, no ads, no internet permission.
+</en-IN>
 
 ## 0.7.4
 
