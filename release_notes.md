@@ -4,6 +4,14 @@ The public "What's new" text for each Play release, plus the internal release na
 console. The notes must stay under 500 characters per language. A new section is added at the
 top for every release.
 
+## 0.7.5
+
+**Release name (console):** 0.7.5
+
+**Play release notes:**
+
+When the writing assistant rewrites a reply, it now looks at just the one most recent message by default instead of the last ten. Your rewrite still fits the conversation, but the model on this phone reads less. You can still choose how much history it sees in Settings, from none up to ten. Everything stays on your phone - no account, no ads, no internet permission.
+
 ## 0.7.4
 
 **Release name (console):** 0.7.4

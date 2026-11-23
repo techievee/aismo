@@ -107,9 +107,10 @@ data class AppSettings(
     val rephraseBackend: LlmBackend = LlmBackend.LLAMA_CPP,
     /**
      * How many of the thread's most recent messages the writing assistant sees when rewriting a reply, so the
-     * rewrite fits the conversation; 0 passes only the draft. Capped at 10 to keep a small model's context window safe.
+     * rewrite fits the conversation; 0 passes only the draft. Defaults to the single most recent message, and is
+     * capped at 10 to keep a small model's context window safe.
      */
-    val rephraseContextMessages: Int = 10,
+    val rephraseContextMessages: Int = 1,
     /** Auto-translate incoming messages that are not in [translateTargetLang], using the writing assistant's model. */
     val translateEnabled: Boolean = true,
     /** The language to translate into; blank means the phone's own language when the app knows it. */
